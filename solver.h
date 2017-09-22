@@ -55,6 +55,7 @@ Variable *solverAuxVarNew(Solver *solver, char *var_name, int lb, int ub);
 void solverAddConstrNode(Solver *solver, ConstraintNode *node);
 
 Arc *arcNew(Constraint *constr, Variable *var);
+void arcQueueFree(ArcQueue * arcs);
 bool arcQueueFind(ArcQueue *queue, Arc *arc);
 
 #endif

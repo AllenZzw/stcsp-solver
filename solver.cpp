@@ -355,6 +355,15 @@ Arc *arcNew(Constraint *constr, Variable *var) {
     return arc;
 }
 
+void arcQueueFree(ArcQueue * arcs){
+    while(!arcs->empty()){
+        Arc * arc = arcs->front();
+        arcs->pop_front();
+        myFree(arc);
+    }
+    delete arcs;
+}
+
 bool arcQueueFind(ArcQueue *queue, Arc *arc) {
     bool found = false;
     int size = queue->size();
