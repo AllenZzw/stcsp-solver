@@ -22,9 +22,9 @@ void *myMalloc2(size_t size, const char *func) {
         exit(1);
     }
     myLog(LOG_DETAILED_TRACE, "Malloc-ed in %s\n", func);
-#if MEMORY    
+#if MEMORY
     mallocCount++;
-#endif    
+#endif
 
     return ptr;
 }
@@ -32,9 +32,9 @@ void *myMalloc2(size_t size, const char *func) {
 /* exported */
 void myFree2(void *ptr, const char *func) {
     if (ptr != NULL) {
-#if MEMORY        
+#if MEMORY
         freeCount++;
-#endif        
+#endif
         free(ptr);
         myLog(LOG_DETAILED_TRACE, "Free-ed in %s\n", func);
     }
@@ -90,6 +90,7 @@ void freeMemory() {
 }
 
 /* exported */
+//backup? backup the address of data ?
 void backup(int *addr) {
     if (memory == NULL) {
         memory = newChunk();
@@ -153,8 +154,8 @@ double cpuTime() {
     return ((double)(buf.tms_utime + buf.tms_stime + buf.tms_cutime + buf.tms_cstime)) / ((double)sysconf(_SC_CLK_TCK));
 }
 
-//int logLevel = LOG_TRACE;
-int logLevel = LOG_ERROR;//TRACE;
+// int logLevel = LOG_DEBUG;
+int logLevel = LOG_ERROR;
 int color[] = { 0, 31, 33, 37, 35, 32, 36 };
 
 void myLog(int level, char *format, ...) {

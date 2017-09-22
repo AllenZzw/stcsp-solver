@@ -4,6 +4,8 @@
 #include <csignal>
 #include <cmath>
 #include <unistd.h>
+#include <list>
+#include <vector>
 #include "util.h"
 #include "token.h"
 #include "node.h"
@@ -38,7 +40,7 @@ Variable *solverGetVar(Solver *solver, char *name) {
 // First variable that is not bound yet. Used in branching in search.
 Variable *solverGetFirstUnboundVar(Solver *solver) {
     Variable *var = NULL;
-    
+
     int size = solver->varQueue->size();
     bool found = false;
     for (int i = 0; !found && i < size; i++) {
@@ -50,13 +52,33 @@ Variable *solverGetFirstUnboundVar(Solver *solver) {
     return var;
 }
 
+Array *solverGetArray(Solver *solver, char *name){
+    Array * array = NULL;
+    int size = solver->arrayQueue->size();
+    bool found = false;
+    for (int i = 0; !found && i < size; i++) {
+        if (strcmp(name, (*(solver->arrayQueue))[i]->name) == 0) {
+            array = (*(solver->arrayQueue))[i];
+            found = true;
+        }
+    }
+    if (array == NULL) {
+        myLog(LOG_ERROR, "Variable '%s' has not been defined.\n", name);
+        exit(1);
+    }
+    return array;
+}
+
+
 Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution) {
     Solver *solver = (Solver *)myMalloc(sizeof(Solver));
     solver->tokenTable = tokenTableNew();
     solver->varQueue = variableQueueNew();
+    solver->arrayQueue = arrayQueueNew();
     solver->constrQueue = constraintQueueNew();
     solver->numAuxVar = 0;
     solver->numSignVar = 0;
+    solver->numUntil = 0;
     solver->numNodes = 0;
     solver->numFails = 0;
     solver->numSolutions = 0;
@@ -98,6 +120,13 @@ Variable *solverAuxVarNew(Solver *solver, char *var_name, int lb, int ub) {
     return solverAddVar(solver, var_name == NULL ? name : var_name, lb, ub);
 }
 
+Array *solverAddArr(Solver *solver, char *arr_name, vector<int> array){
+    Array * arr = NULL;
+    arr = arrayNew(solver, arr_name, array);
+    arrayQueuePush(solver->arrayQueue, arr);
+    return arr;
+}
+
 void solverAddConstrNode(Solver *solver, ConstraintNode *node) {
     Constraint *constr = constraintNew(solver, node);
     solverConstraintQueuePush(solver->constrQueue, constr, solver, true);
@@ -110,6 +139,15 @@ void solverParse(Solver *solver, Node *node) {
             solverParse(solver, node->right);
         } else if (node->token == VAR) {
             solverAddVar(solver, node->str, node->right->num1, node->right->num2);
+        } else if (node->token == ARR) {
+            list<int> temp;
+            Node * array_node = node->right;
+            while(array_node != NULL){
+                temp.push_front(array_node->num1);
+                array_node = array_node->left;
+            }
+            vector<int> elements(temp.begin(), temp.end());
+            solverAddArr(solver, node->str, elements);
         } else { /* assume to be constraint */
             solverAddConstr(solver, node);
             //solverAddConstrNode(solver, constraintNodeParse(solver, node));
@@ -222,30 +260,32 @@ void solve(Node *node) {
     solver = solverNew(0, 0, prefixK, varOrder, printSolution);
     initTimeStart = cpuTime();
     if (node != NULL) {
+        // parse the statement list
         solverParse(solver, node);
         solver->initTime = cpuTime() - initTimeStart;
-        
+        //for debug: print out the variable
         int size = solver->varQueue->size();
         for (int i = 0; i < size; i++) {
             variablePrint((*(solver->varQueue))[i]);
         }
+        //for debug: print out varaibles of constraint
         size = solver->constrQueue->size();
         myLog(LOG_TRACE, "ConstraintQueue size: %d\n\n", size);
         for (int i = 0; i < size; i++) {
             constraintPrint((*(solver->constrQueue))[i]);
         }
-        
+
         solverSolve(solver, testing); // Actual solving done.
     } else {
         printf("No constraints!\n");
     }
     solverFree(solver);
-    
+
     if (testing) {
         vector<double> times;
         int numTimes = 0;
         bool converge = false;
-        
+
         while (!converge) {
             printf("%d ", numTimes);
             fflush(stdout);
@@ -256,13 +296,14 @@ void solve(Node *node) {
             solver = solverNew(0, 0, prefixK, varOrder, printSolution);
             initTimeStart = cpuTime();
             if (node != NULL) {
-                solverParse(solver, node);
+                solverParse(solver, node); //parsing the statement
                 solver->initTime = cpuTime() - initTimeStart;
-                
+                //print out variable
                 int size = solver->varQueue->size();
                 for (int i = 0; i < size; i++) {
                     variablePrint((*(solver->varQueue))[i]);
                 }
+                //print constraint variable names
                 size = solver->constrQueue->size();
                 myLog(LOG_TRACE, "ConstraintQueue size: %d\n\n", size);
                 for (int i = 0; i < size; i++) {
@@ -273,16 +314,16 @@ void solve(Node *node) {
                 printf("No constraints!\n");
             }
             solverFree(solver);
-            
+
             numTimes++;
-            
+
             if (numTimes >= 10) {
                 double mean = 0;
                 for (int c = 0; c < numTimes; c++) {
                     mean += times[c];
                 }
                 mean = mean/((double) numTimes);
-                
+
                 double sampleVar = 0;
                 for (int c = 0; c < numTimes; c++) {
                     sampleVar += (times[c] - mean) * (times[c] - mean);
@@ -295,11 +336,11 @@ void solve(Node *node) {
             }
         }
     }
-    
+
     if (node != NULL) {
         nodeFree(node);
     }
-    
+
     freeMemory();
 #if MEMORY
     myLog(LOG_DEBUG, "Malloc = %d, Free = %d, Diff = %d\n", mallocCount, freeCount, mallocCount - freeCount);
@@ -310,6 +351,7 @@ Arc *arcNew(Constraint *constr, Variable *var) {
     Arc *arc = (Arc *)myMalloc(sizeof(Arc));
     arc->constr = constr;
     arc->var = var;
+    arc->inqueue = false;
     return arc;
 }
 

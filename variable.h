@@ -20,6 +20,7 @@ struct Variable {
     int *currUB; // Array of k upper bounds, for enforcing prefix-k consistency.
     int prevValue; // Value assigned to previous time point.
     int isSignature; // Whether the variable is in the signature of the St-CSP.
+    int isUntil; // Whether the variable is in the until signature of the St-CSP.
     int propagateValue; // For use when enforcing the prefix-k consistency/GAC.
     int propagateTimestamp; // Not in use?
 };
@@ -49,5 +50,21 @@ VariableQueue *variableQueueNew();
 void variableQueueFree(VariableQueue *queue);
 bool variableQueueFind(VariableQueue *queue, Variable *var);
 void variableQueuePush(VariableQueue *queue, Variable *var);
+
+struct Array {
+    Solver *solver;
+    char *name;
+    int size;
+    vector<int> elements;
+};
+
+typedef vector<Array *> ArrayQueue;
+Array *arrayNew(struct Solver * solver, char *name, vector<int> elements);
+void variableFree(Array *arr);
+
+ArrayQueue *arrayQueueNew();
+void arrayQueueFree(ArrayQueue *queue);
+bool arrayQueueFind(ArrayQueue *queue, Array *arr);
+void arrayQueuePush(ArrayQueue *queue, Array *arr);
 
 #endif

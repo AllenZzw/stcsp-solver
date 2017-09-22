@@ -39,6 +39,7 @@ void tokenTableInit(TokenTable *table) {
     tokenTableAddToken(table, GE_CON, ">=", 1);
     tokenTableAddToken(table, EQ_CON, "==", 1);
     tokenTableAddToken(table, NE_CON, "!=", 1);
+    tokenTableAddToken(table, UNTIL_CON, "until", 1);
 
     /* logical_or_expression */
     tokenTableAddToken(table, OR_OP, "or", 2);
@@ -65,15 +66,18 @@ void tokenTableInit(TokenTable *table) {
     tokenTableAddToken(table, '/', "/", 7);
     tokenTableAddToken(table, '%', "%", 7);
 
+    /* at_expression */
+    tokenTableAddToken(table, AT, "@", 8); 
+
     /* fby_expression */
-    tokenTableAddToken(table, FBY, "fby", 8);
+    tokenTableAddToken(table, FBY, "fby", 9);
 
     /* unary_expression */
-    tokenTableAddToken(table, FIRST, "first", 9);
-    tokenTableAddToken(table, NEXT, "next", 9);
-    tokenTableAddToken(table, IF, "if", 9);
-    tokenTableAddToken(table, THEN, "then", 9);
-    tokenTableAddToken(table, ABS, "abs", 9);
+    tokenTableAddToken(table, FIRST, "first", 10);
+    tokenTableAddToken(table, NEXT, "next", 10);
+    tokenTableAddToken(table, IF, "if", 10);
+    tokenTableAddToken(table, THEN, "then", 10);
+    tokenTableAddToken(table, ABS, "abs", 10);
 }
 
 TokenTable *tokenTableNew() {

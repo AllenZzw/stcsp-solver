@@ -15,4 +15,12 @@ Node *nodeNew(int token, char *str, int num1, int num2, Node *left, Node *right)
 void nodeFree(Node *node);
 void nodeDraw(Node *node, char *filename);
 
+typedef struct _streamListNode {
+    struct _streamListNode * next;
+    int daton;
+} streamListNode;
+
+streamListNode *streamListNodeNew(streamListNode* next_ptr, int daton);
+
+
 #endif

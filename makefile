@@ -14,7 +14,8 @@ LDFLAGS =
 else
 LEX = flex
 YACC = yacc #byacc
-LDFLAGS = -Wl,-stack_size,0x40000000,-stack_addr,0xf0000000
+# LDFLAGS = -Wl, -stack_size,0x40000000, -stack_addr,0xf0000000
+LDFLAGS = -Wl
 endif
 endif
 
@@ -46,9 +47,10 @@ CFLAGS = -g2 -pg -std=gnu99 -Wall -pedantic $(DFLAGS)
 else
 YFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer $(DFLAGS)
 CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings $(DFLAGS)
+# CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings -stdlib=libstdc++ $(DFLAGS)
 endif
 
-# -std=gnu99
+-std=gnu99
 
 .PHONY: clean
 

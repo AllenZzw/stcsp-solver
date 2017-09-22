@@ -8,6 +8,7 @@
 using namespace __gnu_cxx;
 using namespace std;
 
+
 // A signature is the finite representation of an St-CSP.
 // Equivalence of signature implies equivalence of St-CSP.
 struct Signature{
@@ -47,6 +48,8 @@ struct Vertex {
     int id; // ID for a vertex.
     Signature *signature; // Signature denoting the implicit St-CSP the vertex is. Vertices can be looked up by signature in a VertexTable.s
     bool visited; // Boolean flag for automaton traversal (for outputting automaton).
+    bool valid; // Boolean flag for indicating whether the node can reach a final node.
+    bool final; // Boolean flag for indicating whether the node is final or not 
     EdgeMap *edges;
     int timePoint;
 };
@@ -71,16 +74,18 @@ struct Variable;
 
 Vertex *vertexNew(Graph *g, Signature *signature, int timePoint);
 void vertexAddEdge(Vertex *vertex, Edge *edge);
-void vertexOut(Vertex *vertex, FILE *fp, int numVar, int numSignVar);
+void vertexOut(Vertex *vertex, FILE *fp, int numVar, int numSignVar, int numUntil);
 Edge *edgeNew(Vertex *src, Vertex *dst, VariableQueue *varQueue, int numVar);
 void edgeOut(Edge *edge, FILE *fp, int numVar, int numSignVar);
 void vertexTableAddVertex(VertexTable *table, Vertex *vertex);
 void vertexTableRemoveVertex(VertexTable *table, Vertex *vertex);
 Vertex *vertexTableGetVertex(VertexTable *table, Signature signature);
 Graph *graphNew();
-void graphOut(Graph *g, FILE *fp, int numVar, int numSignVar);
+void graphOut(Graph *g, FILE *fp, int numVar, int numSignVar, int numUntil);
 void graphFree(Graph *g);
 void vertexFree(Vertex *vertex);
+void graphTraverse(Graph * graph, int numSignVar, int numUntil);
+// bool graphTraverseRe(Vertex * vertex, vector<Vertex *> & visitedVertices);
 
 void signatureOut(Signature &signature);
 

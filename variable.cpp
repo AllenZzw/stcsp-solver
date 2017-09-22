@@ -16,10 +16,10 @@ Variable *variableNew(Solver *solver, char *name, int lb, int ub) {
         myLog(LOG_ERROR, "Invalid domain [%d, %d] in variable %s\n", lb, ub, name);
         exit(1);
     }
-    
+
     var->lb = lb;
     var->ub = ub;
-    
+
     var->prevValue = 0;
     var->currLB = (int *)myMalloc(sizeof(int) * solver->prefixK);
     var->currUB = (int *)myMalloc(sizeof(int) * solver->prefixK);
@@ -27,14 +27,15 @@ Variable *variableNew(Solver *solver, char *name, int lb, int ub) {
         var->currLB[i] = lb;
         var->currUB[i] = ub;
     }
-    
+
     var->propagateTimestamp = 0;
     var->propagateValue = 0;
     var->isSignature = 0;
-    
+    var->isUntil = 0;
+
     var->constraints = new vector<Constraint *>();
     var->numConstr = 0;
-    
+
     myLog(LOG_TRACE, "var %s : [ %d, %d ];\n", name, lb, ub);
     return var;
 }
@@ -96,7 +97,7 @@ void variableAdvanceOneTimeStep(Solver *solver, Variable *var) {
         backup(&var->currLB[i]);
         backup(&var->currUB[i]);
     }
-    
+
     var->prevValue = variableGetValue(var);
     for (int i = 0; i < solver->prefixK - 1; i++){
         var->currLB[i] = var->currLB[i + 1];
@@ -152,4 +153,50 @@ void variablePrint(Variable *var) {
         myLog(LOG_TRACE, "%d ", (*(var->constraints))[size-1]->id);
     }
     myLog(LOG_TRACE, "\n\n");
+}
+
+
+Array *arrayNew(struct Solver * solver, char *name, vector<int> elements){
+    myLog(LOG_TRACE, "arrayNew\n");
+    Array * arr = (Array*)myMalloc(sizeof(Array));
+    arr->solver = solver;
+    arr->name = strdup(name);
+    if(elements.size() == 0){
+        myLog(LOG_ERROR, "Invalid size 0 in variable %s\n", name);
+        exit(1);
+    }
+
+    arr->elements = elements;
+    arr->size = elements.size();
+
+    myLog(LOG_TRACE, "arr %s, size:%d, elements: {", name, elements.size());
+    for(int i = 0; i != arr->size; i++){
+        myLog(LOG_TRACE, " %d", elements[i]);
+    }
+    myLog(LOG_TRACE, "};\n");
+    return arr;
+}
+void variableFree(Array *arr){
+    free(arr->name);
+    myFree(arr);
+}
+ArrayQueue *arrayQueueNew(){
+    ArrayQueue * queue = new vector<Array *>();
+    return queue;
+}
+void arrayQueueFree(ArrayQueue *queue){
+    delete queue;
+}
+bool arrayQueueFind(ArrayQueue *queue, Array *arr){
+    int size = queue->size();
+    bool found = false;
+    for(int c = 0; !found && c < size; c++) {
+        if(arr == (*queue)[c]) {
+            found = true;
+        }
+    }
+    return found;
+}
+void arrayQueuePush(ArrayQueue *queue, Array *arr){
+    queue->push_back(arr);
 }

@@ -32,6 +32,8 @@ void nodeFree(Node *node) {
 void nodePrintDesc(FILE *fp, Node *node) {
     if (node->token == IDENTIFIER) {
         fprintf(fp, "%s", node->str);
+    } else if (node->token == ARR_IDENTIFIER) {
+        fprintf(fp, "%d", node->str);
     } else if (node->token == CONSTANT) {
         fprintf(fp, "%d", node->num1);
     } else if (node->token == RANGE) {
@@ -52,7 +54,9 @@ void nodePrintDesc(FILE *fp, Node *node) {
         fprintf(fp, "==");
     } else if (node->token == NE_CON) {
         fprintf(fp, "!=");
-    } else if (node->token == LT_OP) {
+    } else if (node->token == UNTIL_CON) {
+        fprintf(fp, "until");
+    }else if (node->token == LT_OP) {
         fprintf(fp, "lt");
     } else if (node->token == GT_OP) {
         fprintf(fp, "gt");
@@ -70,6 +74,8 @@ void nodePrintDesc(FILE *fp, Node *node) {
         fprintf(fp, "or");
     } else if (node->token == NOT_OP) {
         fprintf(fp, "not");
+    } else if (node->token == AT ) {
+        fprintf(fp, "@");
     } else if (node->token == FIRST) {
         fprintf(fp, "first");
     } else if (node->token == NEXT) {
@@ -112,4 +118,11 @@ void nodeDraw(Node *node, char *filename) {
     nodeDrawRe(fp, node);
     fprintf(fp, "}\n");
     fclose(fp);
+}
+
+streamListNode *streamListNodeNew(streamListNode* next_ptr, int daton){
+    streamListNode *node = (streamListNode *)myMalloc(sizeof(streamListNode));
+    node->next = next_ptr;
+    node->daton = daton;
+    return node;
 }

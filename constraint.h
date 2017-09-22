@@ -3,11 +3,16 @@
 
 #include "node.h"
 #include <vector>
+#include <deque>
 using namespace std;
 
 struct Solver;
 struct Variable;
+struct Array;
+struct Arc;
 typedef vector<Variable *> VariableQueue;
+typedef vector<Array *> ArrayQueue;
+typedef deque<Arc *> ArcQueue;
 
 // Used for evaluating the value of a ConstraintNode.
 // Bottom element denotes an unknown value.
@@ -20,31 +25,38 @@ struct ConstraintNode {
     int token; // Token representing the node
     int num; // If the node is a constant, the actual number
     Variable *var; // If the node is a variable/identifier node, the variable
+    Array *array; // If the node is a array/identifier node, the array
     ConstraintNode *left;
     ConstraintNode *right;
 };
 
 #define CONSTR_NEXT      0
 #define CONSTR_POINT     1
+#define CONSTR_UNTIL     2
+#define CONSTR_AT        3
 
 struct Constraint {
     Solver *solver; // Solver that owns the constraint
     ConstraintNode *node; // Syntactic structure of the constraint
-    int type; // Either a CONSTR_NEXT or CONSTR_POINT
+    int type; // Either a CONSTR_NEXT or CONSTR_POINT or CONSTR_UNTIL
     int id; // ID of the constraint
+    int expire; // for until constraint, check whether it is expired or not
     VariableQueue *variables; // List of variables the constraint involves
+    ArrayQueue *arraies; // List of arraies the constraint involves
     int numVar; // Number of variables it has
     bool hasFirst; // Whether the constraint has a first operator in it
+    ArcQueue *arcs; // List of arcs related to this constraint 
 };
 
 typedef vector<Constraint *> ConstraintQueue;
 
-ConstraintNode *constraintNodeNew(int token, int num, Variable *var, ConstraintNode *left, ConstraintNode *right);
+ConstraintNode *constraintNodeNew(int token, int num, Variable *var, Array* array, ConstraintNode *left, ConstraintNode *right);
 void constraintNodeFree(ConstraintNode *node);
 ConstraintNode *constraintNodeNewVar(Variable *var);
 ConstraintNode *constraintNodeNewConstant(int num);
 ConstraintNode *constraintNodeNewFirst(ConstraintNode *node);
 ConstraintNode *constraintNodeNewNext(ConstraintNode *node);
+ConstraintNode *constraintNodeNewAt(Variable *var, int timepoint);
 ConstraintNode *constraintNodeParse(Solver *solver, Node *node);
 void constraintNodeLogPrint(ConstraintNode *node, Solver *solver);
 

@@ -9,11 +9,12 @@
 #include "y.tab.h"
 #include "variable.h"
 
-ConstraintNode *constraintNodeNew(int token, int num, Variable *var, ConstraintNode *left, ConstraintNode *right) {
+ConstraintNode *constraintNodeNew(int token, int num, Variable *var, Array* array, ConstraintNode *left, ConstraintNode *right) {
     ConstraintNode *node = (ConstraintNode *)myMalloc(sizeof(ConstraintNode));
     node->token = token;
     node->num = num;
     node->var = var;
+    node->array = array;
     node->left = left;
     node->right = right;
     return node;
@@ -30,42 +31,56 @@ void constraintNodeFree(ConstraintNode *node) {
 }
 
 ConstraintNode *constraintNodeNewVar(Variable *var) {
-    return constraintNodeNew(IDENTIFIER, 0, var, NULL, NULL);
+    return constraintNodeNew(IDENTIFIER, 0, var, NULL, NULL, NULL);
+}
+
+ConstraintNode *constraintNodeNewArr(Array *array) {
+    return constraintNodeNew(ARR_IDENTIFIER, 0, NULL, array, NULL, NULL);
 }
 
 ConstraintNode *constraintNodeNewConstant(int num) {
-    return constraintNodeNew(CONSTANT, num, NULL, NULL, NULL);
+    return constraintNodeNew(CONSTANT, num, NULL, NULL, NULL, NULL);
 }
 
 ConstraintNode *constraintNodeNewFirst(ConstraintNode *node) {
-    return constraintNodeNew(FIRST, 0, NULL, NULL, node);
+    return constraintNodeNew(FIRST, 0, NULL, NULL, NULL, node);
 }
 
 ConstraintNode *constraintNodeNewNext(ConstraintNode *node) {
-    return constraintNodeNew(NEXT, 0, NULL, NULL, node);
+    return constraintNodeNew(NEXT, 0, NULL, NULL, NULL, node);
 }
 
-// Parses an AST node into a ConstraintNode.
+ConstraintNode *constraintNodeNewAt(Variable *var, int timepoint) {
+    return constraintNodeNew(AT, 0, NULL, NULL, constraintNodeNewVar(var), constraintNodeNewConstant(timepoint));
+}
+
+// Construct a constraint node tree and return the root constraint node 
 ConstraintNode *constraintNodeParse(Solver *solver, Node *node) {
     ConstraintNode *constrNode = NULL;
     if (node->token == '<' || node->token == '>' ||
         node->token == LE_CON || node->token == GE_CON ||
-        node->token == EQ_CON || node->token == NE_CON ||
+        node->token == EQ_CON || node->token == NE_CON || node->token == UNTIL_CON ||
         node->token == '+' || node->token == '-' || node->token == '*' || node->token == '/' || node->token == '%' ||
         node->token == LT_OP || node->token == GT_OP || node->token == LE_OP || node->token == GE_OP ||
         node->token == EQ_OP || node->token == NE_OP || node->token == AND_OP || node->token == OR_OP ||
         node->token == FBY || node->token == IF || node->token == THEN) {
-        constrNode = constraintNodeNew(node->token, 0, NULL,
+        constrNode = constraintNodeNew(node->token, 0, NULL, NULL, 
                             constraintNodeParse(solver, node->left),
                             constraintNodeParse(solver, node->right));
-    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT) {
-        constrNode = constraintNodeNew(node->token, 0, NULL, NULL, constraintNodeParse(solver, node->right));
+    } else if ( node->token == AT ) {
+        constrNode = constraintNodeNew(node->token, 0, NULL, NULL, constraintNodeParse(solver, node->left), constraintNodeNew(CONSTANT, node->num1, NULL, NULL, NULL, NULL));
+    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT ) {
+        constrNode = constraintNodeNew(node->token, 0, NULL, NULL, NULL, constraintNodeParse(solver, node->right));
     } else if (node->token == CONSTANT) {
-        constrNode = constraintNodeNew(node->token, node->num1, NULL, NULL, NULL);
+        constrNode = constraintNodeNewConstant(node->num1);
     } else if (node->token == IDENTIFIER) {
         constrNode = constraintNodeNew(node->token, 0,
                                        solverGetVar(solver, node->str),
-                                        NULL, NULL);
+                                        NULL, NULL, NULL);
+    } else if (node->token == ARR_IDENTIFIER) {
+        constrNode = constraintNodeNew(node->token, 0, NULL,
+                                        solverGetArray(solver, node->str),
+                                        NULL, constraintNodeParse(solver, node->right));
     } else {
         myLog(LOG_ERROR, "Unknown token: %d\n", node->token);
         exit(1);
@@ -74,71 +89,80 @@ ConstraintNode *constraintNodeParse(Solver *solver, Node *node) {
 }
 
 void constraintNodeLogPrint(ConstraintNode *node, Solver *solver) {
+    
     if (node->token == '<' || node->token == '>' ||
         node->token == LE_CON || node->token == GE_CON ||
-        node->token == EQ_CON || node->token == NE_CON ||
+        node->token == EQ_CON || node->token == NE_CON || node->token == UNTIL_CON || 
         node->token == '+' || node->token == '-' || node->token == '*' || node->token == '/' || node->token == '%' ||
+        node->token == AT ||
         node->token == LT_OP || node->token == GT_OP || node->token == LE_OP || node->token == GE_OP ||
         node->token == EQ_OP || node->token == NE_OP || node->token == AND_OP || node->token == OR_OP) {
-        if (node->left->token != CONSTANT && node->left->token != IDENTIFIER &&
+        if (node->left->token != CONSTANT && node->left->token != IDENTIFIER && node->left->token != ARR_IDENTIFIER &&
             tokenLevel(solver->tokenTable, node->token) > tokenLevel(solver->tokenTable, node->left->token)) {
-            myLog(LOG_TRACE, "(");
+            myLog(LOG_DEBUG, "(");
             constraintNodeLogPrint(node->left, solver);
-            myLog(LOG_TRACE, ")");
+            myLog(LOG_DEBUG, ")");
         } else {
             constraintNodeLogPrint(node->left, solver);
         }
-        myLog(LOG_TRACE, " %s ", tokenString(solver->tokenTable, node->token));
-        if (node->right->token != CONSTANT && node->right->token != IDENTIFIER &&
+        myLog(LOG_DEBUG, " %s ", tokenString(solver->tokenTable, node->token));
+        if (node->right->token != CONSTANT && node->right->token != IDENTIFIER && node->right->token != ARR_IDENTIFIER &&
             tokenLevel(solver->tokenTable, node->token) > tokenLevel(solver->tokenTable, node->right->token)) {
-            myLog(LOG_TRACE, "(");
+            myLog(LOG_DEBUG, "(");
             constraintNodeLogPrint(node->right, solver);
-            myLog(LOG_TRACE, ")");
+            myLog(LOG_DEBUG, ")");
         } else {
             constraintNodeLogPrint(node->right, solver);
         }
     } else if (node->token == FBY) {
-        myLog(LOG_TRACE, "(");
+        myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->left, solver);
-        myLog(LOG_TRACE, ")");
-        myLog(LOG_TRACE, " %s ", tokenString(solver->tokenTable, node->token));
-        myLog(LOG_TRACE, "(");
+        myLog(LOG_DEBUG, ")");
+        myLog(LOG_DEBUG, " %s ", tokenString(solver->tokenTable, node->token));
+        myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->right, solver);
-        myLog(LOG_TRACE, ")");
+        myLog(LOG_DEBUG, ")");
     } else if (node->token == IF) {
-        myLog(LOG_TRACE, "%s ", tokenString(solver->tokenTable, node->token));
-        myLog(LOG_TRACE, "(");
+        myLog(LOG_DEBUG, "%s ", tokenString(solver->tokenTable, node->token));
+        myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->left, solver);
-        myLog(LOG_TRACE, ")");
+        myLog(LOG_DEBUG, ")");
         constraintNodeLogPrint(node->right, solver);
     } else if (node->token == THEN) {
-        myLog(LOG_TRACE, " %s ", tokenString(solver->tokenTable, node->token));
-        myLog(LOG_TRACE, "(");
+        myLog(LOG_DEBUG, " %s ", tokenString(solver->tokenTable, node->token));
+        myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->left, solver);
-        myLog(LOG_TRACE, ")");
-        myLog(LOG_TRACE, " else ");
-        myLog(LOG_TRACE, "(");
+        myLog(LOG_DEBUG, ")");
+        myLog(LOG_DEBUG, " else ");
+        myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->right, solver);
-        myLog(LOG_TRACE, ")");
+        myLog(LOG_DEBUG, ")");
     } else if (node->token == ABS || node->token == FIRST || node->token == NEXT) {
-        myLog(LOG_TRACE, "%s(", tokenString(solver->tokenTable, node->token));
+        myLog(LOG_DEBUG, "%s(", tokenString(solver->tokenTable, node->token));
         constraintNodeLogPrint(node->right, solver);
-        myLog(LOG_TRACE, ")");
+        myLog(LOG_DEBUG, ")");
     } else if (node->token == CONSTANT) {
-        myLog(LOG_TRACE, "%d", node->num);
+        myLog(LOG_DEBUG, "%d", node->num);
     } else if (node->token == IDENTIFIER) {
-        myLog(LOG_TRACE, "%s", node->var->name);
+        myLog(LOG_DEBUG, "%s", node->var->name);
+    } else if (node->token == ARR_IDENTIFIER) {
+        myLog(LOG_DEBUG, "%s", node->array->name);
+        myLog(LOG_DEBUG, "[");
+        constraintNodeLogPrint(node->right, solver);
+        myLog(LOG_DEBUG, "]");
     }
 }
 
 Constraint *constraintNew(Solver *solver, ConstraintNode *node) {
+
     Constraint *constr = (Constraint *)myMalloc(sizeof(Constraint));
     constr->solver = solver;
     constr->node = node;
     constr->variables = new vector<Variable *>();
+    constr->arcs = new deque<Arc *>();
     constr->numVar = 0;
     constr->hasFirst = false;
-    
+    constr->expire = 0;
     return constr;
 }
 
@@ -196,13 +220,29 @@ void constraintVariableLink(Constraint *constr) {
     constraintVarLinkRe(constr, constr->node);
 }
 
+// Given a constraint, push each pair of (constraint, variable) into ArcQueue
+void constraintArcLink(Constraint *constr) {
+    // myLog(LOG_DEBUG, "Link arcs to constraint: ");
+    // constraintPrint(constr);
+    int numVar = constr->variables->size();
+    for (int i =0; i < numVar; i++) {
+        // myLog(LOG_DEBUG, "variable: %s\n", (*(constr->variables))[i]->name );
+        Arc *temp = arcNew(constr, (*(constr->variables))[i]);
+        if (!arcQueueFind(constr->arcs, temp)) {
+            constr->arcs->push_back(temp);
+        } else {
+            myFree(temp);
+        }
+    }
+}
+
 // Checks whether a ConstraintNode contains a first operator.
 // Used to determine if it is necessary to do constraint translation
 // during solving.
 bool constraintNodeHasFirst(ConstraintNode *constrNode) {
     if (constrNode == NULL) {
         return false;
-    } else if (constrNode->token == FIRST) {
+    } else if (constrNode->token == FIRST || constrNode->token == AT) {
         return true;
     } else if (constrNode->token == IDENTIFIER || constrNode->token == CONSTANT) {
         return false;
@@ -215,33 +255,47 @@ bool constraintNodeHasFirst(ConstraintNode *constrNode) {
 // than a normal constraintQueuePush because solver contains more information.
 void solverConstraintQueuePush(ConstraintQueue *queue, Constraint *constr, Solver *solver, bool checkForFirst) {
     constr->id = queue->size();
+
     /*if (constr->node->right->token == FIRST) {
         constr->type = CONSTR_FIRST;
         myLog(LOG_TRACE, "FIRST: ");
     } else */
-    if (constr->node->right->token == NEXT) {
+    if (constr->node->token == UNTIL_CON) {
+        if (constr->node->right->var->isUntil != 1) {
+            constr->node->right->var->isUntil = 1;
+            solver->numUntil++;
+        }
+        constr->type = CONSTR_UNTIL;
+        myLog(LOG_TRACE, "UNTIL : ");
+    }
+    else if (constr->node->right->token == NEXT ) {
         if (!constr->node->left->var->isSignature) {
             constr->node->left->var->isSignature = 1;
             solver->numSignVar++;
         }
         constr->type = CONSTR_NEXT;
         myLog(LOG_TRACE, "NEXT : ");
-    } else {
+    }
+    else if (constr->node->right->token == AT ){
+        constr->type = CONSTR_AT;
+        myLog(LOG_TRACE, "AT : ");
+    } 
+    else {
         constr->type = CONSTR_POINT;
         myLog(LOG_TRACE, "POINT: ");
     }
-    
-    if (checkForFirst /*&& (!solver->hasFirst)*/ && constraintNodeHasFirst(constr->node)) {
+
+    if (checkForFirst /*&& solver->hasFirst */ && constraintNodeHasFirst(constr->node)) {
         solver->hasFirst = true;
         constr->hasFirst = true;
     }
-    
+
     constraintNodeLogPrint(constr->node, solver);
-    myLog(LOG_TRACE, ";\n");
+    myLog(LOG_DEBUG, ";\n");
     //myLog(LOG_TRACE, "Scope:");
     //constraintAddScopeOmega(constr, constr->node);
     //myLog(LOG_TRACE, "\n");
-    
+
     /* if (queue->size == 0) {
         queue->head = constr;
     } else {
@@ -250,7 +304,8 @@ void solverConstraintQueuePush(ConstraintQueue *queue, Constraint *constr, Solve
     queue->tail = constr;
     queue->size++; */
     constraintVariableLink(constr);
-    
+
+    constraintArcLink(constr);
     // Variable queue reverse for optimising prefix-k support finding
     // for nested if-then-elses
     int size = constr->variables->size();
@@ -259,8 +314,8 @@ void solverConstraintQueuePush(ConstraintQueue *queue, Constraint *constr, Solve
         (*constr->variables)[c] = (*constr->variables)[size-c-1];
         (*constr->variables)[size-c-1] = temp;
     }
-    
-    myLog(LOG_TRACE, "Constraint ID: %d\n", constr->id);
+
+    myLog(LOG_DEBUG, "Constraint ID: %d\n", constr->id);
     queue->push_back(constr);
 }
 
@@ -296,7 +351,15 @@ LiftedInt constraintNodeValue(ConstraintNode *constrNode) {
         }
     } else if (constrNode->token == NEXT) {
         result.tag = true;
-    } else if (constrNode->token == ABS) {
+    } else if (constrNode->token == ARR_IDENTIFIER) {
+        LiftedInt rightResult = constraintNodeValue(constrNode->right);
+        if (rightResult.tag) {
+            result.tag = true;
+        } else {
+            result = rightResult;
+            result.Int = constrNode->array->elements[result.Int];
+        }
+    }else if (constrNode->token == ABS) {
         LiftedInt rightResult = constraintNodeValue(constrNode->right);
         if (rightResult.tag) {
             result.tag = true;
@@ -346,7 +409,7 @@ LiftedInt constraintNodeValue(ConstraintNode *constrNode) {
     } else {
         LiftedInt leftResult = constraintNodeValue(constrNode->left);
         LiftedInt rightResult = constraintNodeValue(constrNode->right);
-        
+
         if (leftResult.tag || rightResult.tag) {
             result.tag = true;
         } else {
@@ -374,7 +437,7 @@ LiftedInt constraintNodeValue(ConstraintNode *constrNode) {
 bool constraintNodeTautology(ConstraintNode *constrNode) {
     LiftedInt leftResult = constraintNodeValue(constrNode->left);
     LiftedInt rightResult = constraintNodeValue(constrNode->right);
-    
+
     if (leftResult.tag || rightResult.tag) {
         return false;
     } else {
@@ -385,6 +448,7 @@ bool constraintNodeTautology(ConstraintNode *constrNode) {
             case GE_CON : return leftResult.Int >= rightResult.Int; break;
             case EQ_CON : return leftResult.Int == rightResult.Int; break;
             case NE_CON : return leftResult.Int != rightResult.Int; break;
+            case UNTIL_CON: return rightResult.Int == 1; break;
             default : myLog(LOG_TRACE, "Weird constraint in constraintNodeTautology.\n"); return false; break;
         }
     }
@@ -399,11 +463,35 @@ ConstraintNode *constraintNodeTranslateFirst(ConstraintNode *constrNode, Solver 
         ConstraintNode *result;
         if (constrNode->token == IDENTIFIER) {
             int num = variableGetValue(constrNode->var);
-            result = constraintNodeNew(CONSTANT, num, NULL,
-                                       NULL, NULL);
+            result = constraintNodeNew(CONSTANT, num, NULL, NULL, NULL, NULL);
         } else {
-            result = constraintNodeNew(constrNode->token, constrNode->num, NULL,
+            result = constraintNodeNew(constrNode->token, constrNode->num, NULL, NULL,
                                        constraintNodeTranslateFirst(constrNode->left, solver), constraintNodeTranslateFirst(constrNode->right, solver));
+        }
+        return result;
+    }
+}
+
+// add constraint _V == <constant> in the constraint queue 
+// change _V@<constant> to _V@(<constant>-1)
+ConstraintNode *constraintNodeTranslateAT(ConstraintNode *constrNode, Solver *solver) {
+    if (constrNode == NULL) {
+        return NULL;
+    } else {
+        // if( solver->timePoint == 1 ) {
+        //     // add constraint _V == <constant> in the constraint queue 
+        //     int bounded_value = variableGetValue(constrNode->left->var);
+        //     solverAddConstrNode(solver, constraintNodeNew(EQ_CON, 0, NULL, NULL, constraintNodeNewVar(constrNode->left->var), constraintNodeNewConstant(bounded_value)));
+        // }
+        ConstraintNode * result;
+        if( constrNode->right->right->num == 1) {
+            ConstraintNode * leftNode = constraintNodeNewVar(constrNode->left->var);
+            ConstraintNode * rightNode = constraintNodeNewFirst(constraintNodeNewVar(constrNode->right->left->var));
+            result = constraintNodeNew(constrNode->token, 0, NULL, NULL, leftNode, rightNode);
+        } else {
+            ConstraintNode * leftNode = constraintNodeNewVar(constrNode->left->var);
+            ConstraintNode * rightNode = constraintNodeNewAt(constrNode->right->left->var, constrNode->right->right->num-1);
+            result = constraintNodeNew(constrNode->token, 0, NULL, NULL, leftNode, rightNode);
         }
         return result;
     }
@@ -416,6 +504,9 @@ ConstraintNode *constraintNodeTranslate(ConstraintNode *constrNode, Solver *solv
         return NULL;
     } else {
         ConstraintNode *result;
+        // myLog(LOG_TRACE, "before translate:");
+        // constraintNodeLogPrint(constrNode, solver);
+        // myLog(LOG_TRACE, ";\n");
         if (constrNode->token == FIRST) {
             result = constraintNodeTranslateFirst(constrNode->right, solver);
             LiftedInt num = constraintNodeValue(result);
@@ -423,12 +514,17 @@ ConstraintNode *constraintNodeTranslate(ConstraintNode *constrNode, Solver *solv
                 myLog(LOG_TRACE, "constraintNodeTranslate error: content in \"first\" cannot be completely evaluated.\n");
             } else {
                 constraintNodeFree(result);
-                result = constraintNodeNew(CONSTANT, num.Int, NULL, NULL, NULL);
+                result = constraintNodeNew(CONSTANT, num.Int, NULL, NULL, NULL, NULL);
             }
+        } else if (constrNode->token == EQ_CON && constrNode->right->token == AT) {
+            result = constraintNodeTranslateAT(constrNode, solver);
         } else {
-            result = constraintNodeNew(constrNode->token, constrNode->num, constrNode->var,
+            result = constraintNodeNew(constrNode->token, constrNode->num, constrNode->var, constrNode->array,
                                        constraintNodeTranslate(constrNode->left, solver), constraintNodeTranslate(constrNode->right, solver));
         }
+        // myLog(LOG_TRACE, "after translate:");
+        // constraintNodeLogPrint(result, solver);
+        // myLog(LOG_TRACE, ";\n");
         return result;
     }
 }

@@ -14,6 +14,7 @@ using namespace std;
 struct Arc {
     Constraint *constr;
     Variable *var;
+    bool inqueue;
 };
 
 typedef deque<Arc *> ArcQueue;
@@ -21,6 +22,7 @@ typedef deque<Arc *> ArcQueue;
 struct Solver {
     TokenTable *tokenTable; // Token table for printing out the internal representation of the St-CSP.
     VariableQueue *varQueue; // List of variables.
+    ArrayQueue *arrayQueue; // List of prefix/array.
     ConstraintQueue *constrQueue; // (Current) List of constraints.
     int numAuxVar; // Number of auxiliary variables introduced in normalisation.
     int numNodes; // Number of states in the output automaton.
@@ -32,6 +34,7 @@ struct Solver {
     
     int prefixK; // Value K for prefix-K consistency enforcement.
     int numSignVar; // Number of signature variables.
+    int numUntil; // Number of until signature variables.
     int numDominance; // Number of dominances detected, asymptotically equal to the number of edges in the automaton.
     int timePoint; // Denotes the current time point of the search state.
     Graph *graph; // Automaton
@@ -44,6 +47,8 @@ struct Solver {
 
 Variable *solverGetVar(Solver *solver, char *name);
 Variable *solverGetFirstUnboundVar(Solver *solver);
+
+Array *solverGetArray(Solver *solver, char *name);
 
 void solve(Node *node);
 Variable *solverAuxVarNew(Solver *solver, char *var_name, int lb, int ub);

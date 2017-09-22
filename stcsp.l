@@ -22,6 +22,7 @@ extern "C"{
 
 "var"           { return VAR; }
 "obj"           { return OBJ; }
+"arr"			{ return ARR; }
 
 "<"             { return '<'; }
 ">"             { return '>'; }
@@ -29,6 +30,7 @@ extern "C"{
 ">="            { return GE_CON; }
 "=="            { return EQ_CON; }
 "!="            { return NE_CON; }
+"until"			{ return UNTIL_CON; }
 
 "lt"            { return LT_OP; }
 "gt"            { return GT_OP; }
@@ -46,6 +48,8 @@ extern "C"{
 "/"             { return '/'; }
 "%"             { return '%'; }
 
+"@" 			{ return AT; }
+
 "abs"           { return ABS; }
 
 "first"         { return FIRST; }
@@ -62,12 +66,13 @@ extern "C"{
 "{"             { return '{'; }
 "}"             { return '}'; }
 
+
 ","             { return ','; }
 ";"             { return ';'; }
 ":"             { return ':'; }
 
 {L}({L}|{D})*   { yylval.str = strdup(yytext); return IDENTIFIER; }
-{D}+            { yylval.num = atoi(yytext); return CONSTANT; }
+[-]?{D}+            { yylval.num = atoi(yytext); return CONSTANT; }
 
 "'"[^\n]*       { }
 [ \t\v\f]       { }

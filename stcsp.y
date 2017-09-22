@@ -1,15 +1,16 @@
-%token STATEMENT RANGE
-%token VAR OBJ
-%token LE_CON GE_CON EQ_CON NE_CON
+%token STATEMENT RANGE LIST
+%token VAR OBJ ARR
+%token LE_CON GE_CON EQ_CON NE_CON UNTIL_CON
 %token LT_OP GT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP NOT_OP
-%token FIRST NEXT FBY IF THEN ELSE
+%token AT FIRST NEXT FBY IF THEN ELSE
 %token ABS
 
 %{
 #include <cstdio>
 #include <cstdlib>
 #include "node.h"
+#include <sys/resource.h>
 
 #define basicNodeNew(token, left, right) nodeNew((token), NULL, 0, 0, (left), (right))
 
@@ -36,14 +37,15 @@ char **my_argv = NULL;
 }
 
 %token <str> IDENTIFIER
+%token <str> ARR_IDENTIFIER
 %token <num> CONSTANT
 
-%type <node> statement_list statement declaration_statement objective_statement constraint_statement
+%type <node> statement_list statement declaration_statement objective_statement constraint_statement array_content
 %type <num> constraint_operator
 %type <node> expression logical_or_expression logical_and_expression
 %type <node> equality_expression relational_expression
 %type <num> relational_operator
-%type <node> additive_expression multiplicative_expression
+%type <node> additive_expression multiplicative_expression at_expression
 %type <node> fby_expression
 %type <node> unary_expression primary_expression
 
@@ -66,12 +68,16 @@ statement
     | constraint_statement
     ;
 
+array_content
+    : CONSTANT { $$ = nodeNew(LIST, NULL, $1, 0, NULL, NULL); }
+    | array_content ',' CONSTANT { $$=nodeNew(LIST, NULL, $3, 0, $1, NULL); }
+    ;
+
 declaration_statement
     : VAR IDENTIFIER ':' '[' CONSTANT ',' CONSTANT ']' ';' { $$ = nodeNew(VAR, $2, 0, 0, NULL, nodeNew(RANGE, NULL, $5, $7, NULL, NULL)); }
-    | VAR IDENTIFIER ':' '[' '-' CONSTANT ',' CONSTANT ']' ';' { $$ = nodeNew(VAR, $2, 0, 0, NULL, nodeNew(RANGE, NULL, -$6, $8, NULL, NULL)); }
-    | VAR IDENTIFIER ':' '[' CONSTANT ',' '-' CONSTANT ']' ';' { $$ = nodeNew(VAR, $2, 0, 0, NULL, nodeNew(RANGE, NULL, $5, -$8, NULL, NULL)); }
-    | VAR IDENTIFIER ':' '[' '-' CONSTANT ',' '-' CONSTANT ']' ';' { $$ = nodeNew(VAR, $2, 0, 0, NULL, nodeNew(RANGE, NULL, -$6, -$9, NULL, NULL)); }
+    | ARR IDENTIFIER ':' '{' array_content '}' ';' { $$=nodeNew(ARR, $2, 0, 0, NULL, $5); }
     ;
+
 
 objective_statement
     : OBJ IDENTIFIER ';' { $$ = nodeNew(OBJ, $2, 0, 0, NULL, NULL); }
@@ -88,6 +94,7 @@ constraint_operator
     | GE_CON { $$ = GE_CON; }
     | EQ_CON { $$ = EQ_CON; }
     | NE_CON { $$ = NE_CON; }
+    | UNTIL_CON { $$ = UNTIL_CON; }
     ;
 
 expression
@@ -129,10 +136,15 @@ additive_expression
     ;
 
 multiplicative_expression
-    : fby_expression { $$ = $1; }
-    | multiplicative_expression '*' fby_expression { $$ = basicNodeNew('*', $1, $3); }
-    | multiplicative_expression '/' fby_expression { $$ = basicNodeNew('/', $1, $3); }
-    | multiplicative_expression '%' fby_expression { $$ = basicNodeNew('%', $1, $3); }
+    : at_expression { $$ = $1; }
+    | multiplicative_expression '*' at_expression { $$ = basicNodeNew('*', $1, $3); }
+    | multiplicative_expression '/' at_expression { $$ = basicNodeNew('/', $1, $3); }
+    | multiplicative_expression '%' at_expression { $$ = basicNodeNew('%', $1, $3); }
+    ;
+
+at_expression
+    : fby_expression { $$ = $1;}
+    | fby_expression AT CONSTANT { $$ = nodeNew(AT, NULL, $3, 0, $1, NULL); }
     ;
 
 fby_expression
@@ -150,8 +162,8 @@ unary_expression
 
 primary_expression
     : IDENTIFIER { $$ = nodeNew(IDENTIFIER, $1, 0, 0, NULL, NULL); }
+    | IDENTIFIER '[' expression ']' { $$ = nodeNew(ARR_IDENTIFIER, $1, 0, 0, NULL, $3);}
     | CONSTANT { $$ = nodeNew(CONSTANT, NULL, $1, 0, NULL, NULL); }
-    | '-' CONSTANT { $$ = nodeNew(CONSTANT, NULL, -$2, 0, NULL, NULL); }
     | '(' expression ')' { $$ = $2; }
     ;
 
@@ -160,6 +172,18 @@ primary_expression
 extern FILE *yyin;
 
 int main(int argc, char *argv[]) {
+    //setting the memory to be unlimit
+    #undef YYMAXDEPTH
+    #define YYMAXDEPTH 100000
+    /*
+    struct rlimit x;
+    if (getrlimit(RLIMIT_STACK, &x) < 0)
+        perror("getrlimit");
+    x.rlim_cur = RLIM_INFINITY;
+    if (setrlimit(RLIMIT_STACK, &x) < 0)
+        perror("setrlimit");
+    */
+    
     int i;
     char *filename;
 
