@@ -281,7 +281,7 @@ ConstraintNode *constraintNormalise(Solver *solver, ConstraintNode *node, int &l
                 lb = MIN(myLB, myLB2);
                 ub = MAX(myUB, myUB2);
             } else if (node->token == '<' || node->token == '>' || node->token == LE_CON || node->token == GE_CON ||
-                       node->token == EQ_CON || node->token == NE_CON ||
+                       node->token == EQ_CON || node->token == NE_CON || node->token == IMPLY_CON ||
                        node->token == LT_OP || node->token == GT_OP || node->token == LE_OP || node->token == GE_OP ||
                        node->token == EQ_OP || node->token == NE_OP ||
                        node->token == AND_OP || node->token == OR_OP) {
@@ -372,6 +372,14 @@ int solverValidateRe(ConstraintNode *node, bool & valid) {
                 res = 1;
             } else {
                 res = solverValidateRe(node->right, valid);
+            }
+        } else if (node->token == IMPLY_CON) {
+            left = solverValidateRe(node->left, valid);
+            if ( left == 0 ){
+                res = 1;
+            } else {
+                right = solverValidateRe(node->right, valid);
+                res = (left <= right);
             }
         } else {
             left = solverValidateRe(node->left, valid);
@@ -598,7 +606,7 @@ bool enforceUntilConsistency(Solver *solver, Constraint *constr, Variable *var, 
 
 // GAC algorithm
 bool generalisedArcConsistent(Solver *solver) {
-    myLog(LOG_DEBUG, "enter generalisedArcConsistent\n");
+    myLog(LOG_TRACE, "enter generalisedArcConsistent\n");
     bool consistent = true; // consistent is to check whether the consistency is satisfied
     bool change = false; // change is to check whether the range has changed
     // Push in all arcs
@@ -609,7 +617,7 @@ bool generalisedArcConsistent(Solver *solver) {
         solver->arcQueue->pop_front();
         arc->inqueue = false;
     }
-
+    
     int numConstr = solver->constrQueue->size();
     for (int c = 0; c < numConstr; c++) {
         Constraint *constr = (*(solver->constrQueue))[c];
@@ -622,19 +630,20 @@ bool generalisedArcConsistent(Solver *solver) {
             temp->inqueue = true;
             solver->arcQueue->push_back(temp);
         }
+        // for (int d = 0; d < numVar; d++) {
+        //     // set arc->inqueue to be true 
+            
+        //     Arc *temp = arcNew(constr, (*variables)[d]);
+        //     solver->arcQueue->push_back(temp);
+        // }
     }
     // Enforce consistency
     while (consistent && !solver->arcQueue->empty()) {
         Arc *arc = solver->arcQueue->front();
         solver->arcQueue->pop_front();
-        
+        arc->inqueue = false;
         Constraint *constr = arc->constr;
         Variable *var = arc->var;
-
-        myLog(LOG_DEBUG, "constraintID: %d\n", solver->constraintID);
-        myLog(LOG_DEBUG, "consistent: variable: %s\n", var->name);
-        constraintNodeLogPrint(constr->node, solver);
-        myLog(LOG_DEBUG, ";\n");
 
         // Enforce arc
         if (constr->type == CONSTR_NEXT) {
@@ -649,25 +658,53 @@ bool generalisedArcConsistent(Solver *solver) {
             consistent = true;
         }
 
+        if (!consistent) {
+            myLog(LOG_DEBUG, "inconsistent variable: %s\n", var->name);
+            constraintNodeLogPrint(constr->node, solver);
+            myLog(LOG_DEBUG, ";\n");
+        }
+
         if (consistent && change) {
+            // Push in relevant arcs
+            if(strcmp(var->name, "_V1") == 0){
+                myLog(LOG_DEBUG, "constraintID: %d\n", solver->constraintID);
+                myLog(LOG_DEBUG, "consistent: variable: %s\n", var->name);
+                constraintNodeLogPrint(constr->node, solver);
+                myLog(LOG_DEBUG, ";\n");
+            }
+
             ConstraintQueue *constraints = var->constraints;
             int size = constraints->size();
             for (int c = 0; c < size; c++) {
-                ArcQueue *arcs = (*constraints)[c]->arcs;
-                int numArc = arcs->size();
-                for (int d = 0; d < numArc; d++) {
-                    Arc * temp = (*arcs)[d];
-                    if(temp->var != var && !temp->inqueue) {
-                        temp->inqueue = true;
-                        solver->arcQueue->push_back(temp);
+                if ((*constraints)[c] != constr) {
+                    ArcQueue *arcs = (*constraints)[c]->arcs;
+                    int numArc = arcs->size();
+                    for (int d = 0; d < numArc; d++) {
+                        Arc * temp = (*arcs)[d];
+                        if(!temp->inqueue){
+                            temp->inqueue = true;
+                            solver->arcQueue->push_back(temp);
+                        }   
                     }
+                    // VariableQueue *variables = (*constraints)[c]->variables;
+                    // int numVar = variables->size();
+                    // for (int d = 0; d < numVar; d++) {
+                    //     if ((*variables)[d] != var) {
+                    //         Arc *temp = arcNew((*constraints)[c], (*variables)[d]);
+                    //         if (!arcQueueFind(solver->arcQueue, temp)) {
+                    //             solver->arcQueue->push_back(temp);
+                    //         } else {
+                    //             myFree(temp);
+                    //         }
+                    //     }
+                    // }
                 }
             }
         }
         arc->inqueue = false;
         change = false;
     }
-    myLog(LOG_DEBUG, "exit generalisedArcConsistent, consistent: %d\n",consistent);
+    myLog(LOG_TRACE, "exit generalisedArcConsistent, consistent: %d\n",consistent);
     return consistent;
 }
 
@@ -760,11 +797,21 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
                 if (constraintQueueEq(solver->constrQueue, (*(solver->seenConstraints))[c])) {
                     // Need to find a way to free this memory without compromising
                     // correctness or efficiency
-                    /*int queueSize = solver->constrQueue->size();
+                    int queueSize = solver->constrQueue->size();
                     for (int j = 0; j < queueSize; j++) {
-                        //constraintFree((*(solver->constrQueue))[j]);
-                        constraintQueuePush(solver->leftOverConstraints, (*(solver->constrQueue))[j]);
-                    }*/
+                        Constraint *currConstr = (*(solver->constrQueue))[j];
+                        int varsSize = currConstr->variables->size();
+                        for(int k = 0; k < varsSize; k++){
+                            Variable * currVar = (*(currConstr->variables))[k];
+                            ConstraintQueue * varConstr = currVar -> constraints;
+                            vector<Constraint *>::iterator it = find(varConstr->begin(), varConstr->end(), currConstr);
+                            if(it != varConstr->end()){
+                                varConstr->erase(it);
+                            }
+                        }
+                        constraintFree(currConstr);
+                        //constraintQueuePush(solver->leftOverConstraints, (*(solver->constrQueue))[j]);
+                    }
                     constraintQueueFree(solver->constrQueue);
                     solver->constrQueue = (*(solver->seenConstraints))[c];
                     solver->constraintID = c;
@@ -836,6 +883,10 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
                 solver->numFails++;
                 ok = false;
             }
+        } else if (temp->fail) {
+            // reach a previous fail state 
+            delete signature;
+            ok = false;
         } else {
             myLog(LOG_DEBUG, "*** Dominance detected\n\n");
             solver->numDominance++;
@@ -844,7 +895,6 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
             ok = true;
         }
         myLog(LOG_DEBUG, "After branching\n");
-        // bug here, not restore the solver constraint 
         if (/*solver->timePoint == 1 &&*/ solver->hasFirst) {
             // Undo constraint translations
             // No need to free current constrQueue because seenConstraints needs to keep it
@@ -867,10 +917,12 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
             edge = edgeNew(vertex, temp, solver->varQueue, solver->varQueue->size());
             vertexAddEdge(vertex, edge);
         } else {
-            vertexTableRemoveVertex(solver->graph->vertexTable, temp);
-            myLog(LOG_TRACE, "After removing vertex\n");
-            vertexFree(temp);
-            myLog(LOG_TRACE, "After freeing vertex\n");
+            temp->fail = true;
+            myLog(LOG_TRACE, "After denote vertex as failure\n");
+            // vertexTableRemoveVertex(solver->graph->vertexTable, temp);
+            // myLog(LOG_TRACE, "After removing vertex\n");
+            // vertexFree(temp);
+            // myLog(LOG_TRACE, "After freeing vertex\n");
         }
     } else {
         // if there are unbound first variable, split the variable to upper half range and lower half range

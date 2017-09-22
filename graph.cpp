@@ -19,6 +19,7 @@ Vertex *vertexNew(Graph *g, Signature *signature, int timePoint) {
     v->timePoint = timePoint;
     v->signature = signature;
     v->visited = false;
+    v->fail = false;
     v->valid = false;
     v->final = false;
     v->edges = new EdgeMap();
@@ -269,7 +270,9 @@ void graphTraverse(Graph * graph, int numSignVar, int numUntil) {
     }
 
     // release Parentmap 
+
     // renumber the vertex in the vertex table 
+    // try: sort verteices by label
     nodequeue.push_front(graph->root);
     int vertex_no = 0;
     while(!nodequeue.empty()){

@@ -1,6 +1,6 @@
 %token STATEMENT RANGE LIST
 %token VAR OBJ ARR
-%token LE_CON GE_CON EQ_CON NE_CON UNTIL_CON
+%token LE_CON GE_CON EQ_CON NE_CON IMPLY_CON UNTIL_CON
 %token LT_OP GT_OP LE_OP GE_OP EQ_OP NE_OP
 %token AND_OP OR_OP NOT_OP
 %token AT FIRST NEXT FBY IF THEN ELSE
@@ -95,6 +95,7 @@ constraint_operator
     | EQ_CON { $$ = EQ_CON; }
     | NE_CON { $$ = NE_CON; }
     | UNTIL_CON { $$ = UNTIL_CON; }
+    | IMPLY_CON { $$ = IMPLY_CON; }
     ;
 
 expression
