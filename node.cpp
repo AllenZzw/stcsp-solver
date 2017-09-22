@@ -54,6 +54,8 @@ void nodePrintDesc(FILE *fp, Node *node) {
         fprintf(fp, "==");
     } else if (node->token == NE_CON) {
         fprintf(fp, "!=");
+    } else if (node->token == IMPLY_CON) {
+        fprintf(fp, "->");
     } else if (node->token == UNTIL_CON) {
         fprintf(fp, "until");
     }else if (node->token == LT_OP) {

@@ -59,7 +59,7 @@ ConstraintNode *constraintNodeParse(Solver *solver, Node *node) {
     ConstraintNode *constrNode = NULL;
     if (node->token == '<' || node->token == '>' ||
         node->token == LE_CON || node->token == GE_CON ||
-        node->token == EQ_CON || node->token == NE_CON || node->token == UNTIL_CON ||
+        node->token == EQ_CON || node->token == NE_CON || node->token == IMPLY_CON || node->token == UNTIL_CON ||
         node->token == '+' || node->token == '-' || node->token == '*' || node->token == '/' || node->token == '%' ||
         node->token == LT_OP || node->token == GT_OP || node->token == LE_OP || node->token == GE_OP ||
         node->token == EQ_OP || node->token == NE_OP || node->token == AND_OP || node->token == OR_OP ||
@@ -92,7 +92,7 @@ void constraintNodeLogPrint(ConstraintNode *node, Solver *solver) {
     
     if (node->token == '<' || node->token == '>' ||
         node->token == LE_CON || node->token == GE_CON ||
-        node->token == EQ_CON || node->token == NE_CON || node->token == UNTIL_CON || 
+        node->token == EQ_CON || node->token == NE_CON || node->token == IMPLY_CON || node->token == UNTIL_CON || 
         node->token == '+' || node->token == '-' || node->token == '*' || node->token == '/' || node->token == '%' ||
         node->token == AT ||
         node->token == LT_OP || node->token == GT_OP || node->token == LE_OP || node->token == GE_OP ||
@@ -223,11 +223,8 @@ void constraintVariableLink(Constraint *constr) {
 
 // Given a constraint, push each pair of (constraint, variable) into ArcQueue
 void constraintArcLink(Constraint *constr) {
-    // myLog(LOG_DEBUG, "Link arcs to constraint: ");
-    // constraintPrint(constr);
     int numVar = constr->variables->size();
     for (int i =0; i < numVar; i++) {
-        // myLog(LOG_DEBUG, "variable: %s\n", (*(constr->variables))[i]->name );
         Arc *temp = arcNew(constr, (*(constr->variables))[i]);
         if (!arcQueueFind(constr->arcs, temp)) {
             constr->arcs->push_back(temp);
@@ -449,6 +446,7 @@ bool constraintNodeTautology(ConstraintNode *constrNode) {
             case GE_CON : return leftResult.Int >= rightResult.Int; break;
             case EQ_CON : return leftResult.Int == rightResult.Int; break;
             case NE_CON : return leftResult.Int != rightResult.Int; break;
+            case IMPLY_CON: return leftResult.Int <= rightResult.Int; break;
             case UNTIL_CON: return rightResult.Int == 1; break;
             default : myLog(LOG_TRACE, "Weird constraint in constraintNodeTautology.\n"); return false; break;
         }

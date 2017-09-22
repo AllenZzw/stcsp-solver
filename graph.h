@@ -48,6 +48,7 @@ struct Vertex {
     int id; // ID for a vertex.
     Signature *signature; // Signature denoting the implicit St-CSP the vertex is. Vertices can be looked up by signature in a VertexTable.s
     bool visited; // Boolean flag for automaton traversal (for outputting automaton).
+    bool fail; // Boolean flag for indicating whether the node is a failure.
     bool valid; // Boolean flag for indicating whether the node can reach a final node.
     bool final; // Boolean flag for indicating whether the node is final or not 
     EdgeMap *edges;

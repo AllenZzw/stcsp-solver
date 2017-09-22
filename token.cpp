@@ -40,6 +40,7 @@ void tokenTableInit(TokenTable *table) {
     tokenTableAddToken(table, EQ_CON, "==", 1);
     tokenTableAddToken(table, NE_CON, "!=", 1);
     tokenTableAddToken(table, UNTIL_CON, "until", 1);
+    tokenTableAddToken(table, IMPLY_CON, "->", 1);
 
     /* logical_or_expression */
     tokenTableAddToken(table, OR_OP, "or", 2);

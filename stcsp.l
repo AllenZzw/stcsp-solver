@@ -30,6 +30,7 @@ extern "C"{
 ">="            { return GE_CON; }
 "=="            { return EQ_CON; }
 "!="            { return NE_CON; }
+"->"			{ return IMPLY_CON; }
 "until"			{ return UNTIL_CON; }
 
 "lt"            { return LT_OP; }
