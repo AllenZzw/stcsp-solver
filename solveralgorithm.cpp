@@ -794,24 +794,18 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
             int numSeenConstraints = solver->seenConstraints->size();
             bool constraintQueueFound = false;
             for (int c = 0; !constraintQueueFound && c < numSeenConstraints; c++) {
+                
                 if (constraintQueueEq(solver->constrQueue, (*(solver->seenConstraints))[c])) {
                     // Need to find a way to free this memory without compromising
                     // correctness or efficiency
-                    int queueSize = solver->constrQueue->size();
-                    for (int j = 0; j < queueSize; j++) {
-                        Constraint *currConstr = (*(solver->constrQueue))[j];
-                        int varsSize = currConstr->variables->size();
-                        for(int k = 0; k < varsSize; k++){
-                            Variable * currVar = (*(currConstr->variables))[k];
-                            ConstraintQueue * varConstr = currVar -> constraints;
-                            vector<Constraint *>::iterator it = find(varConstr->begin(), varConstr->end(), currConstr);
-                            if(it != varConstr->end()){
-                                varConstr->erase(it);
-                            }
-                        }
-                        constraintFree(currConstr);
+                    /*
+                        int queueSize = solver->constrQueue->size(); 
+                        for (int j = 0; j < queueSize; j++) { 
+                         //constraintFree((*(solver->constrQueue))[j]); 
                         //constraintQueuePush(solver->leftOverConstraints, (*(solver->constrQueue))[j]);
-                    }
+                        }
+                    */
+                
                     constraintQueueFree(solver->constrQueue);
                     solver->constrQueue = (*(solver->seenConstraints))[c];
                     solver->constraintID = c;

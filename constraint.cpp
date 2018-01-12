@@ -169,7 +169,7 @@ Constraint *constraintNew(Solver *solver, ConstraintNode *node) {
 void constraintFree(Constraint *constr) {
     constraintNodeFree(constr->node);
     variableQueueFree(constr->variables);
-    arcQueueFree(constr->arcs);
+    //arcQueueFree(constr->arcs);
     myFree(constr);
 }
 
