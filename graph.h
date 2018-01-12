@@ -86,6 +86,10 @@ void graphOut(Graph *g, FILE *fp, int numVar, int numSignVar, int numUntil);
 void graphFree(Graph *g);
 void vertexFree(Vertex *vertex);
 void graphTraverse(Graph * graph, int numSignVar, int numUntil);
+void adversarialTraverse(Graph * graph, VariableQueue * varQueue);
+void renumberVertex(Graph * graph);
+
+//void graphTraverse(Graph * graph, int numSignVar, int numUntil);
 // bool graphTraverseRe(Vertex * vertex, vector<Vertex *> & visitedVertices);
 
 void signatureOut(Signature &signature);

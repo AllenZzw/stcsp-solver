@@ -15,7 +15,7 @@
 #include "graph.h"
 #include "solveralgorithm.h"
 #include "y.tab.h"
-
+#include <deque>
 extern int my_argc;
 extern char **my_argv;
 
@@ -70,7 +70,7 @@ Array *solverGetArray(Solver *solver, char *name){
 }
 
 
-Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution) {
+Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution, bool adversarial) {
     Solver *solver = (Solver *)myMalloc(sizeof(Solver));
     solver->tokenTable = tokenTableNew();
     solver->varQueue = variableQueueNew();
@@ -100,6 +100,7 @@ Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution) 
     solver->constraintID = 0;
     solver->seenConstraints = new vector<ConstraintQueue *>();
     solver->hasFirst = false;
+    solver->adversarial = adversarial;
     solver->arcQueue = new deque<Arc *>();
     return solver;
 }
@@ -202,8 +203,9 @@ void solve(Node *node) {
     double initTimeStart = 0;
     int timeLimit = 0;
     bool testing = false;
+    bool adversarial = false;
 
-    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:");
+    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:a");
     while (c != -1) {
         if (c == 'b') {
             if (sscanf(optarg, "%d,%d", &begin_k, &begin_l) != 2) {
@@ -236,11 +238,13 @@ void solve(Node *node) {
             strcpy(varOrder, optarg);
         } else if (c == 't') {
             testing = true;
-        } else {
+        } else if (c == 'a') {
+            adversarial = true;
+        }else {
             myLog(LOG_ERROR, "Unknown argument: %c\n", c);
             exit(1);
         }
-        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:");
+        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:a");
     }
 
 #ifdef DEBUG
@@ -257,7 +261,7 @@ void solve(Node *node) {
         alarm(timeLimit);
     }
 
-    solver = solverNew(0, 0, prefixK, varOrder, printSolution);
+    solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial);
     initTimeStart = cpuTime();
     if (node != NULL) {
         // parse the statement list
@@ -293,7 +297,7 @@ void solve(Node *node) {
                 signal(SIGALRM, solverTimeout);
                 alarm(timeLimit);
             }
-            solver = solverNew(0, 0, prefixK, varOrder, printSolution);
+            solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial);
             initTimeStart = cpuTime();
             if (node != NULL) {
                 solverParse(solver, node); //parsing the statement

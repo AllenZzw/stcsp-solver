@@ -963,6 +963,10 @@ double solverSolve(Solver *solver, bool testing) {
         solver->numFails++;
     }
     graphTraverse(solver->graph, solver->numSignVar, solver->numUntil);
+    if (solver->adversarial)
+        adversarialTraverse(solver->graph, solver->varQueue);
+    renumberVertex(solver->graph);
+
     levelDown();
     solver->solveTime = cpuTime() - solver->solveTime;
 
