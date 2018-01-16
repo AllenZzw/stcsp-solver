@@ -168,10 +168,12 @@ void graphFree(Graph *g) {
 // now we only pass the i th variable
 bool checkVertexOutEdge(Vertex * vertex, VariableQueue * varQueue, int i) {
     Variable *var = (*varQueue)[i];
-    char * var_name = var->name;
+    //char * var_name = var->name;
+    //check value c
     for (int c = var->lb; c <= var->ub; c++) {
         bool exist = false;
         for (hash_map<int, slist<Edge *> *>::iterator hash_it = vertex->edges->begin(); hash_it != vertex->edges->end(); hash_it++) {
+            //edge list of the vertex
             slist<Edge *> * edge_list = hash_it->second;
             for (slist<Edge *>::iterator edge_it = edge_list->begin(); edge_it != edge_list->end(); edge_it++ ) {
                 if (c == (*edge_it)->values[i] && (*edge_it)->dst->valid) {
@@ -186,6 +188,113 @@ bool checkVertexOutEdge(Vertex * vertex, VariableQueue * varQueue, int i) {
             return false;
     }
     return true;
+}
+
+// check whether some vertex contains all edges with corresponding values
+// now we only pass the i th variable
+bool checkVertexOutEdge2(Vertex * vertex, VariableQueue * varQueue, int op, int ava) {
+    Variable *ava_act = (*varQueue)[ava];
+    Variable *op_act = (*varQueue)[op];
+    
+    hash_map<int, set<int> > ava_act_to_op_acts;
+    size_t op_nums = op_act->ub - op_act->lb + 1;
+    //init
+    for(int a = ava_act->lb; a<= ava_act->ub;a++)
+        ava_act_to_op_acts[a] = set<int>();
+    //single scan through all edges
+    for (hash_map<int, slist<Edge *> *>::iterator hash_it = vertex->edges->begin(); hash_it != vertex->edges->end(); hash_it++) {
+            slist<Edge *> * edge_list = hash_it->second;
+            for (slist<Edge *>::iterator edge_it = edge_list->begin(); edge_it != edge_list->end(); edge_it++ ) {
+                if ( (*edge_it)->dst->valid ) {
+                    int ava_val = (*edge_it)->values[ava];
+                    int op_val = (*edge_it)->values[op];
+                    //add op_val to ava_val
+                    ava_act_to_op_acts[ava_val].insert(op_val);
+                    if(ava_act_to_op_acts[ava_val].size() == op_nums)
+                        return true;
+                }
+            }
+    }
+    return false;
+}
+
+void adversarialTraverse2(Graph * graph, VariableQueue * varQueue){
+    // construct a parent map 
+    hash_map<int, slist<Vertex *> *> Parent_map;
+    set<Vertex *> VerticesToProcess;
+    for(hash_map<Signature, Vertex *, signatureHash, signatureEq>::iterator it = (*graph->vertexTable).begin(); it != (*graph->vertexTable).end(); it ++){
+        Vertex * vertex = it->second;
+        for(hash_map<int, slist<Edge *> *>::iterator hash_it = vertex->edges->begin(); hash_it != vertex->edges->end(); hash_it++) {
+            int child_no = hash_it->first;
+            if(Parent_map.find(child_no) == Parent_map.end()) {
+                Parent_map[child_no] = new slist<Vertex *>();
+            }
+            if(child_no != vertex->id){
+                Parent_map[child_no]->push_front(vertex);
+            }
+        }
+    }
+
+    for(hash_map<Signature, Vertex *, signatureHash, signatureEq>::iterator it = (*graph->vertexTable).begin(); it != (*graph->vertexTable).end(); it ++){
+        Vertex * vertex = it->second;
+        VerticesToProcess.insert(vertex);
+    }
+
+    while(!VerticesToProcess.empty()){
+        Vertex * current_vertex = *(VerticesToProcess.begin());
+        VerticesToProcess.erase(current_vertex);
+        //opponent 5, avatar 6
+        if(!checkVertexOutEdge2(current_vertex, varQueue, 5, 6)){
+            current_vertex->valid = false;
+            if(Parent_map.find(current_vertex->id) != Parent_map.end()){
+                for(slist<Vertex *>::iterator sit = Parent_map[current_vertex->id]->begin(); sit != Parent_map[current_vertex->id]->end(); sit++ ){
+                    if((*sit)->valid)
+                        VerticesToProcess.insert(*sit);
+                }
+            }
+        }
+    }
+
+    // // AC-1 like node valid detection
+    // bool change;
+    // do {
+    //     change = false;
+    //     for (hash_map<Signature, Vertex *, signatureHash, signatureEq>::iterator it = (*graph->vertexTable).begin(); it != (*graph->vertexTable).end(); it ++) {
+    //         Signature signature = it->first;
+    //         Vertex * vertex = it->second;
+    //         if(vertex->valid && !checkVertexOutEdge(vertex, varQueue, 5)){
+    //             vertex->valid = false;
+    //             change = true;
+    //         }
+    //     }
+    // } while(change);
+
+    if(!graph->root->valid){
+        Vertex * vertex = graph->root;
+        vector<int> deleteEdge;
+        for (hash_map<int, slist<Edge *> *>::iterator hash_it = vertex->edges->begin(); hash_it != vertex->edges->end(); hash_it++) {
+            deleteEdge.push_back(hash_it->first);
+        }
+        for (vector<int>::iterator vec_it = deleteEdge.begin(); vec_it != deleteEdge.end(); vec_it++ )
+            vertex->edges->erase(*vec_it);
+    }
+    else{
+        for (hash_map<Signature, Vertex *, signatureHash, signatureEq>::iterator it = (*graph->vertexTable).begin(); it != (*graph->vertexTable).end(); it ++) {
+            Vertex * vertex = it->second;
+            if (vertex->valid) {
+                vector<int> deleteEdge;
+                for (hash_map<int, slist<Edge *> *>::iterator hash_it = vertex->edges->begin(); hash_it != vertex->edges->end(); hash_it++) {
+                    slist<Edge *> * edge_list = hash_it->second;
+                    if ( !edge_list->front()->dst->valid ) {
+                        deleteEdge.push_back(hash_it->first);
+                    }
+                }
+
+                for (vector<int>::iterator vec_it = deleteEdge.begin(); vec_it != deleteEdge.end(); vec_it++ )
+                    vertex->edges->erase(*vec_it);
+            }
+        }
+    }
 }
 
 void adversarialTraverse(Graph * graph, VariableQueue * varQueue){
