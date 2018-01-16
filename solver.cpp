@@ -207,7 +207,7 @@ void solve(Node *node) {
     bool adversarial1 = false;
 	bool adversarial2 = false;
 	
-    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:a");
+    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:az");
     while (c != -1) {
         if (c == 'b') {
             if (sscanf(optarg, "%d,%d", &begin_k, &begin_l) != 2) {
@@ -250,7 +250,7 @@ void solve(Node *node) {
             myLog(LOG_ERROR, "Unknown argument: %c\n", c);
             exit(1);
         }
-        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:a");
+        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:az");
     }
 
 #ifdef DEBUG
