@@ -963,8 +963,11 @@ double solverSolve(Solver *solver, bool testing) {
         solver->numFails++;
     }
     graphTraverse(solver->graph, solver->numSignVar, solver->numUntil);
-    if (solver->adversarial)
-        adversarialTraverse(solver->graph, solver->varQueue);
+    if (solver->adversarial1)
+		adversarialTraverse(solver->graph, solver->varQueue);
+	else if (solver->adversarial2)
+        adversarialTraverse2(solver->graph, solver->varQueue);
+	
     renumberVertex(solver->graph);
 
     levelDown();

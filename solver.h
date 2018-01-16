@@ -42,7 +42,8 @@ struct Solver {
     int constraintID; // Denotes the ID of the current set of constraints.
     vector<ConstraintQueue *> *seenConstraints; // List of all *sets* of constraints seen in the search.
     bool hasFirst; // Flag for whether the first operator is involved in the constraints.
-    bool adversarial; // Flag for whether to generate an adversarial plan.
+    bool adversarial1; // Flag for whether to generate an adversarial plan.
+	bool adversarial2; // Flag for whether to generate an simultaneous adversarial plan.
     ArcQueue *arcQueue; // Queue for enforcing prefix-k/GAC consistency.
 };
 
