@@ -29,7 +29,8 @@ struct Solver {
     int numFails; // Number of failures encountered. Note that a better consistency notion might give a lower numFails.
     int numSolutions; // Not used?
     double initTime; // Time taken for initialisation, i.e. parsing AST into constraint representation.
-    double solveTime; // Time taken for solve the St-CSP.
+    double solveTime; // Time for solver to taken for solve the St-CSP.
+    double processTime; // Time for solver to post-processing.
     int printSolution; // Boolean flag - whether to output the automaton or not.
     
     int prefixK; // Value K for prefix-K consistency enforcement.

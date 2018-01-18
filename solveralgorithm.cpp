@@ -956,19 +956,38 @@ double solverSolve(Solver *solver, bool testing) {
     //solverPrint(solver);
     solver->solveTime = cpuTime();
     solver->seenConstraints->push_back(solver->constrQueue);
+
+    //create root node for solving  
+    vector<int> temp;
+    Signature *signature = new Signature(temp, 0);
+    solver->graph->root = vertexNew(solver->graph, signature, 0);
+    vertexTableAddVertex(solver->graph->vertexTable, solver->graph->root);
+    //check whether there are until constraints
+    int tem_size = solver->constrQueue->size();
+    solver->graph->root->final = true;
+    for(int c = 0; c < tem_size; c++) {
+        Constraint * temp_constr = (*(solver->constrQueue))[c];
+        if( temp_constr->type == CONSTR_UNTIL ){
+            solver->graph->root->final = false; 
+            break;
+        }
+    }
+
     levelUp();
     if (generalisedArcConsistent(solver)) {
         solverSolveRe(solver, solver->graph->root);
     } else {
         solver->numFails++;
     }
+    solver->solveTime = cpuTime() - solver->solveTime;
+    solver->processTime = cpuTime();
     graphTraverse(solver->graph, solver->numSignVar, solver->numUntil);
     if (solver->adversarial)
         adversarialTraverse(solver->graph, solver->varQueue);
     renumberVertex(solver->graph);
-
+    solver->processTime = cpuTime() - solver->processTime;
     levelDown();
-    solver->solveTime = cpuTime() - solver->solveTime;
+    
 
     solver->numNodes = solver->graph->vertexTable->size();
     myLog(LOG_INFO, "Dominance: %d\n", solver->numDominance);
@@ -980,9 +999,9 @@ double solverSolve(Solver *solver, bool testing) {
     }
 
     if (!testing) {
-        // init_time, var, con, dom, node, fail, solve_time
-        // printf("%.2f\t%d\t%d\t%d\t%d\t%d\t%.2f\n", solver->initTime, (int) solver->varQueue->size(), (int) solver->constrQueue->size(), solver->numDominance, solver->numNodes, solver->numFails, solver->solveTime);
-        // fflush(stdout);
+        // init_time, var, con, dom, node, fail, solve_time, processTime
+        printf("%.2f\t%d\t%d\t%d\t%d\t%d\t%.2f\t%.5f\n", solver->initTime, (int) solver->varQueue->size(), (int) solver->constrQueue->size(), solver->numDominance, solver->numNodes, solver->numFails, solver->solveTime, solver->processTime);
+        fflush(stdout);
     }
-    return solver->solveTime;
+    return solver->solveTime + solver->processTime;
 }

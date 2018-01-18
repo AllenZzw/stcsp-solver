@@ -86,6 +86,7 @@ Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution, 
     solver->propagateTimestamp = 0;
     solver->initTime = 0;
     solver->solveTime = 0;
+    solver->processTime = 0;
     solver->timePoint = 0;
     solver->graph = graphNew();
     solver->printSolution = printSolution;
