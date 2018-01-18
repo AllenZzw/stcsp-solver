@@ -70,7 +70,7 @@ Array *solverGetArray(Solver *solver, char *name){
 }
 
 
-Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution, bool adversarial) {
+Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution, bool adversarial1, bool adversarial2) {
     Solver *solver = (Solver *)myMalloc(sizeof(Solver));
     solver->tokenTable = tokenTableNew();
     solver->varQueue = variableQueueNew();
@@ -101,7 +101,8 @@ Solver *solverNew(int k, int l, int prefixK, char *varOrder, int printSolution, 
     solver->constraintID = 0;
     solver->seenConstraints = new vector<ConstraintQueue *>();
     solver->hasFirst = false;
-    solver->adversarial = adversarial;
+    solver->adversarial1 = adversarial1;
+	solver->adversarial2 = adversarial2;
     solver->arcQueue = new deque<Arc *>();
     return solver;
 }
@@ -204,9 +205,10 @@ void solve(Node *node) {
     double initTimeStart = 0;
     int timeLimit = 0;
     bool testing = false;
-    bool adversarial = false;
-
-    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:a");
+    bool adversarial1 = false;
+	bool adversarial2 = false;
+	
+    c = getopt(my_argc, my_argv, "b:e:cv:l:stk:m:az");
     while (c != -1) {
         if (c == 'b') {
             if (sscanf(optarg, "%d,%d", &begin_k, &begin_l) != 2) {
@@ -240,12 +242,16 @@ void solve(Node *node) {
         } else if (c == 't') {
             testing = true;
         } else if (c == 'a') {
-            adversarial = true;
-        }else {
+            adversarial1 = true;
+        }
+		  else if (c == 'z'){
+			adversarial2 = true;
+		}
+		else {
             myLog(LOG_ERROR, "Unknown argument: %c\n", c);
             exit(1);
         }
-        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:a");
+        c = getopt(my_argc, my_argv, "b:e:cv:l:st:k:m:az");
     }
 
 #ifdef DEBUG
@@ -262,7 +268,7 @@ void solve(Node *node) {
         alarm(timeLimit);
     }
 
-    solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial);
+    solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial1,adversarial2);
     initTimeStart = cpuTime();
     if (node != NULL) {
         // parse the statement list
@@ -298,7 +304,7 @@ void solve(Node *node) {
                 signal(SIGALRM, solverTimeout);
                 alarm(timeLimit);
             }
-            solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial);
+            solver = solverNew(0, 0, prefixK, varOrder, printSolution, adversarial1, adversarial2);
             initTimeStart = cpuTime();
             if (node != NULL) {
                 solverParse(solver, node); //parsing the statement
