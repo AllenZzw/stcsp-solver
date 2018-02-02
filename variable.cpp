@@ -118,9 +118,9 @@ void variableQueueFree(VariableQueue *queue) {
     while (var != NULL) {
         variableFree(var);
         var = var->next;
-    }
-    myFree(queue);*/
-    delete queue;
+    }*/
+    myFree(queue);
+    //delete queue;
 }
 
 void variableQueuePush(VariableQueue *queue, Variable *var) {

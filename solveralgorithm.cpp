@@ -630,12 +630,6 @@ bool generalisedArcConsistent(Solver *solver) {
             temp->inqueue = true;
             solver->arcQueue->push_back(temp);
         }
-        // for (int d = 0; d < numVar; d++) {
-        //     // set arc->inqueue to be true 
-            
-        //     Arc *temp = arcNew(constr, (*variables)[d]);
-        //     solver->arcQueue->push_back(temp);
-        // }
     }
     // Enforce consistency
     while (consistent && !solver->arcQueue->empty()) {
@@ -686,23 +680,17 @@ bool generalisedArcConsistent(Solver *solver) {
                             solver->arcQueue->push_back(temp);
                         }   
                     }
-                    // VariableQueue *variables = (*constraints)[c]->variables;
-                    // int numVar = variables->size();
-                    // for (int d = 0; d < numVar; d++) {
-                    //     if ((*variables)[d] != var) {
-                    //         Arc *temp = arcNew((*constraints)[c], (*variables)[d]);
-                    //         if (!arcQueueFind(solver->arcQueue, temp)) {
-                    //             solver->arcQueue->push_back(temp);
-                    //         } else {
-                    //             myFree(temp);
-                    //         }
-                    //     }
-                    // }
                 }
             }
         }
         arc->inqueue = false;
         change = false;
+    }
+
+    while (!solver->arcQueue->empty()) {
+        Arc *arc = solver->arcQueue->front();
+        solver->arcQueue->pop_front();
+        arc->inqueue = false;
     }
     myLog(LOG_TRACE, "exit generalisedArcConsistent, consistent: %d\n",consistent);
     return consistent;
@@ -754,6 +742,7 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
         ConstraintQueue *solverConstraintsBackup = solver->constrQueue;
 
         // constraint rewriting 
+        bool constraintQueueFound = false;
         if (/*solver->timePoint == 1 && */ solver->hasFirst) {
             // Constraint translation and identification
             // Only applicable in the first time point, because only "first" constraints warrant translation
@@ -786,28 +775,15 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
             }
             // Done
 
-            int tempnum = solver->constrQueue->size();
-            for (int i = 0; i < tempnum; i++) {
-                constraintPrint((*(solver->constrQueue))[i]);
-            }
+            // int tempnum = solver->constrQueue->size();
+            // for (int i = 0; i < tempnum; i++) {
+            //     constraintPrint((*(solver->constrQueue))[i]);
+            // }
 
             int numSeenConstraints = solver->seenConstraints->size();
-            bool constraintQueueFound = false;
             for (int c = 0; !constraintQueueFound && c < numSeenConstraints; c++) {
                 
                 if (constraintQueueEq(solver->constrQueue, (*(solver->seenConstraints))[c])) {
-                    // Need to find a way to free this memory without compromising
-                    // correctness or efficiency
-                    /*
-                        int queueSize = solver->constrQueue->size(); 
-                        for (int j = 0; j < queueSize; j++) { 
-                         //constraintFree((*(solver->constrQueue))[j]); 
-                        //constraintQueuePush(solver->leftOverConstraints, (*(solver->constrQueue))[j]);
-                        }
-                    */
-                
-                    constraintQueueFree(solver->constrQueue);
-                    solver->constrQueue = (*(solver->seenConstraints))[c];
                     solver->constraintID = c;
                     constraintQueueFound = true;
                 }
@@ -879,19 +855,28 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
             }
         } else if (temp->fail) {
             // reach a previous fail state 
-            delete signature;
+            myFree(signature);
             ok = false;
         } else {
             myLog(LOG_DEBUG, "*** Dominance detected\n\n");
             solver->numDominance++;
-            //myFree(signature);
-            delete signature;
+            myFree(signature);
             ok = true;
         }
         myLog(LOG_DEBUG, "After branching\n");
-        if (/*solver->timePoint == 1 &&*/ solver->hasFirst) {
+        if (solver->hasFirst) {
             // Undo constraint translations
             // No need to free current constrQueue because seenConstraints needs to keep it
+
+            // Free constraint
+            // solver->constrQueue
+            if(constraintQueueFound){
+                int queueSize = solver->constrQueue->size(); 
+                for (int j = 0; j < queueSize; j++) { 
+                    constraintFree((*(solver->constrQueue))[j]); 
+                }
+            }
+
             solver->constrQueue = solverConstraintsBackup;
             // Done
 
@@ -913,10 +898,6 @@ int solverSolveRe(Solver *solver, Vertex *vertex) {
         } else {
             temp->fail = true;
             myLog(LOG_TRACE, "After denote vertex as failure\n");
-            // vertexTableRemoveVertex(solver->graph->vertexTable, temp);
-            // myLog(LOG_TRACE, "After removing vertex\n");
-            // vertexFree(temp);
-            // myLog(LOG_TRACE, "After freeing vertex\n");
         }
     } else {
         // if there are unbound first variable, split the variable to upper half range and lower half range
@@ -982,11 +963,16 @@ double solverSolve(Solver *solver, bool testing) {
     solver->solveTime = cpuTime() - solver->solveTime;
     solver->processTime = cpuTime();
     graphTraverse(solver->graph, solver->numSignVar, solver->numUntil);
-    if (solver->adversarial1)
-		adversarialTraverse(solver->graph, solver->varQueue);
-	else if (solver->adversarial2)
-        adversarialTraverse2(solver->graph, solver->varQueue);
+    if (solver->adversarial1){
+        adversarialTraverse(solver->graph, solver->varQueue);
+        printf("adver1: %d; ", solver->graph->root->valid);
+    }
 	
+    if (solver->adversarial2){
+        adversarialTraverse2(solver->graph, solver->varQueue);
+        printf("adver2: %d\n", solver->graph->root->valid);
+    }
+    
     renumberVertex(solver->graph);
     solver->processTime = cpuTime() - solver->processTime;
     levelDown();

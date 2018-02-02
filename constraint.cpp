@@ -169,7 +169,7 @@ Constraint *constraintNew(Solver *solver, ConstraintNode *node) {
 void constraintFree(Constraint *constr) {
     constraintNodeFree(constr->node);
     variableQueueFree(constr->variables);
-    //arcQueueFree(constr->arcs);
+    arcQueueFree(constr->arcs);
     myFree(constr);
 }
 
@@ -186,9 +186,9 @@ void constraintQueueFree(ConstraintQueue *queue) {
     while (constr != NULL) {
         constraintFree(constr);
         constr = constr->next;
-    }
-    myFree(queue);*/
-    delete queue;
+    }*/
+    myFree(queue);
+    //delete queue;
 }
 
 // Queue push operation for a ConstraintQueue

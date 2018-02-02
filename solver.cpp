@@ -182,8 +182,8 @@ void solverFree(Solver *solver) {
         }
         constraintQueueFree((*(solver->seenConstraints))[i]);
     }
-    delete solver->seenConstraints;
-    delete solver->arcQueue;
+    myFree(solver->seenConstraints);
+    myFree(solver->arcQueue);
     myFree(solver);
 }
 
@@ -372,7 +372,8 @@ void arcQueueFree(ArcQueue * arcs){
         arcs->pop_front();
         myFree(arc);
     }
-    delete arcs;
+    myFree(arcs);
+    // delete arcs;
 }
 
 bool arcQueueFind(ArcQueue *queue, Arc *arc) {
