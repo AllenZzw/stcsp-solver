@@ -42,7 +42,7 @@ char **my_argv = NULL;
 
 %type <node> statement_list statement declaration_statement objective_statement constraint_statement array_content
 %type <num> constraint_operator
-%type <node> expression logical_or_expression logical_and_expression
+%type <node> expression logical_or_expression logical_and_expression logical_not_expression
 %type <node> equality_expression relational_expression
 %type <num> relational_operator
 %type <node> additive_expression multiplicative_expression at_expression
@@ -176,14 +176,14 @@ int main(int argc, char *argv[]) {
     //setting the memory to be unlimit
     #undef YYMAXDEPTH
     #define YYMAXDEPTH 100000
-    /*
+    #if defined(__linux__)
     struct rlimit x;
     if (getrlimit(RLIMIT_STACK, &x) < 0)
         perror("getrlimit");
     x.rlim_cur = RLIM_INFINITY;
     if (setrlimit(RLIMIT_STACK, &x) < 0)
         perror("setrlimit");
-    */
+    #endif
     
     int i;
     char *filename;

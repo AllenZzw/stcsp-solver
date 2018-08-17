@@ -46,8 +46,13 @@ YFLAGS = -g2 -pg $(DFLAGS)
 CFLAGS = -g2 -pg -std=gnu99 -Wall -pedantic $(DFLAGS)
 else
 YFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer $(DFLAGS)
-CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings $(DFLAGS)
-# CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings -stdlib=libstdc++ $(DFLAGS)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings $(DFLAGS)
+endif
+ifeq ($(UNAME_S),Darwin)
+	CFLAGS = -g2 $(ARCH) -O2 -funroll-loops -fomit-frame-pointer -Wall -pedantic -Wno-write-strings -stdlib=libstdc++ $(DFLAGS)
+endif
 endif
 
 -std=gnu99
