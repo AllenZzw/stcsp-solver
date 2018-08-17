@@ -259,6 +259,12 @@ ConstraintNode *constraintNormalise(Solver *solver, ConstraintNode *node, int &l
                 solverAddConstrVarEqNode(solver, y, constrNodeRight);
             }
             constrNode = node;
+        } else if (node->token == node->token == NOT_OP) {
+            constrNodeRight = constraintNormalise(solver, node->right, myLB, myUB);
+            lb = 0;
+            ub = 1;
+            node->right = constrNodeRight;
+            constrNode = node;
         } else {
             constrNodeLeft = constraintNormalise(solver, node->left, myLB, myUB);
             constrNodeRight = constraintNormalise(solver, node->right, myLB2, myUB2);
@@ -359,6 +365,9 @@ int solverValidateRe(ConstraintNode *node, bool & valid) {
             res = solverValidateRe(node->right, valid);
         } else if (node->token == AT ) {
             res = solverValidateRe(node->left, valid);
+        } else if (node->token == NOT_OP) {
+            temp = solverValidateRe(node->right, valid);
+            res = (temp == 0? 1 : 0);
         } else if (node->token == AND_OP) {
             temp = solverValidateRe(node->left, valid);
             if (temp) {

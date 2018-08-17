@@ -69,7 +69,7 @@ ConstraintNode *constraintNodeParse(Solver *solver, Node *node) {
                             constraintNodeParse(solver, node->right));
     } else if ( node->token == AT ) {
         constrNode = constraintNodeNew(node->token, 0, NULL, NULL, constraintNodeParse(solver, node->left), constraintNodeNew(CONSTANT, node->num1, NULL, NULL, NULL, NULL));
-    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT ) {
+    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT || node->token == NOT_OP  ) {
         constrNode = constraintNodeNew(node->token, 0, NULL, NULL, NULL, constraintNodeParse(solver, node->right));
     } else if (node->token == CONSTANT) {
         constrNode = constraintNodeNewConstant(node->num1);
@@ -137,7 +137,7 @@ void constraintNodeLogPrint(ConstraintNode *node, Solver *solver) {
         myLog(LOG_DEBUG, "(");
         constraintNodeLogPrint(node->right, solver);
         myLog(LOG_DEBUG, ")");
-    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT) {
+    } else if (node->token == ABS || node->token == FIRST || node->token == NEXT || node->token == NOT_OP) {
         myLog(LOG_DEBUG, "%s(", tokenString(solver->tokenTable, node->token));
         constraintNodeLogPrint(node->right, solver);
         myLog(LOG_DEBUG, ")");
@@ -373,6 +373,14 @@ LiftedInt constraintNodeValue(ConstraintNode *constrNode) {
             result = constraintNodeValue(constrNode->right->left);
         } else {
             result = constraintNodeValue(constrNode->right->right);
+        }
+    } else if (constrNode->token == NOT_OP) {
+        LiftedInt rightResult = constraintNodeValue(constrNode->right);
+        if (rightResult.tag) {
+            result.tag = true;
+        } else {
+            result.tag = false;
+            result.Int = (rightResult.Int==0?1:0);
         }
     } else if (constrNode->token == AND_OP) {
         LiftedInt leftResult = constraintNodeValue(constrNode->left);

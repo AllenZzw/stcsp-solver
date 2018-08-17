@@ -99,7 +99,12 @@ constraint_operator
     ;
 
 expression
+    : logical_not_expression { $$ = $1; }
+    ;
+
+logical_not_expression 
     : logical_or_expression { $$ = $1; }
+    | NOT_OP logical_not_expression { $$ = basicNodeNew(NOT_OP, NULL, $2); }
     ;
 
 logical_or_expression

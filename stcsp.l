@@ -42,6 +42,7 @@ extern "C"{
 
 "and"           { return AND_OP; }
 "or"            { return OR_OP; }
+"not"			{ return NOT_OP; }
 
 "+"             { return '+'; }
 "-"             { return '-'; }
