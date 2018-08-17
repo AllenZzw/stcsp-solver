@@ -1,0 +1,37 @@
+var I : [0, 7];
+var D0 : [-1, 7];
+var D1 : [-1, 7];
+var D2 : [-1, 7];
+var D3 : [-1, 7];
+var D4 : [-1, 7];
+var D5 : [-1, 7];
+var A0 : [0, 1];
+var A1 : [0, 1];
+var A2 : [0, 1];
+var A3 : [0, 1];
+var A4 : [0, 1];
+var A5 : [0, 1];
+var MISS : [0, 1];
+var GAMEOVER : [0, 1];
+
+first D0 == -1;
+first D1 == -1;
+first D2 == -1;
+first D3 == -1;
+first D4 == -1;
+D5 == 0 fby 1 fby 2 fby 3 fby 4 fby 5 fby 6 fby 7 fby D5;
+A0 == I eq D0;
+A1 == I ne D0 and I eq D1;
+A2 == I ne D0 and I ne D1 and I eq D2;
+A3 == I ne D0 and I ne D1 and I ne D2 and I eq D3;
+A4 == I ne D0 and I ne D1 and I ne D2 and I ne D3 and I eq D4;
+A5 == I ne D0 and I ne D1 and I ne D2 and I ne D3 and I ne D4 and I eq D5;
+
+MISS == (A0 + A1 + A2 + A3 + A4 + A5) eq 0;
+GAMEOVER == D0 ne -1 and MISS;
+
+next D0 == if GAMEOVER then -1 else if MISS or A0 then D1 else D0;
+next D1 == if GAMEOVER then -1 else if MISS or A0 or A1 then D2 else D1;
+next D2 == if GAMEOVER then -1 else if MISS or A0 or A1 or A2 then D3 else D2;
+next D3 == if GAMEOVER then -1 else if MISS or A0 or A1 or A2 or A3 then D4 else D3;
+next D4 == if GAMEOVER then -1 else if MISS or A0 or A1 or A2 or A3 or A4 then D5 else D4;

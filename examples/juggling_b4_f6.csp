@@ -1,0 +1,28 @@
+var A : [0, 6];
+var B0 : [0, 6];
+var B1 : [0, 6];
+var B2 : [0, 6];
+var B3 : [0, 6];
+
+next B0 == if B0 eq 1 then A else (B0 - 1);
+next B1 == if B1 eq 1 then A else (B1 - 1);
+next B2 == if B2 eq 1 then A else (B2 - 1);
+next B3 == if B3 eq 1 then A else (B3 - 1);
+
+B0 != B1;
+B0 != B2;
+B0 != B3;
+B1 != B2;
+B1 != B3;
+B2 != B3;
+
+A == if B0 eq 1 then next B0
+else if B1 eq 1 then next B1
+else if B2 eq 1 then next B2
+else if B3 eq 1 then next B3
+else 0;
+
+first B0 == 1;
+first B0 < first B1;
+first B1 < first B2;
+first B2 < first B3;

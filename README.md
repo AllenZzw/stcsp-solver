@@ -1,7 +1,7 @@
 # stcsp
 Stream Constraint Satisfaction Problem solver. 
 
-To make the executable, simply "make" in the directory, resulting in ./stcsp as the executable. Compilation requires working versions of lex and yacc.
+To make the executable, simply "make" in the directory "src", resulting in ./stcsp as the executable. Compilation requires working versions of lex and yacc.
 
 Syntax:
 
