@@ -153,7 +153,7 @@ void constraintNodeLogPrint(ConstraintNode *node, Solver *solver) {
     }
 }
 
-Constraint *constraintNew(Solver *solver, ConstraintNode *node) {
+Constraint *constraintNew(Solver *solver, ConstraintNode *node, int expire) {
 
     Constraint *constr = (Constraint *)myMalloc(sizeof(Constraint));
     constr->solver = solver;
@@ -162,7 +162,7 @@ Constraint *constraintNew(Solver *solver, ConstraintNode *node) {
     constr->arcs = new deque<Arc *>();
     constr->numVar = 0;
     constr->hasFirst = false;
-    constr->expire = 0;
+    constr->expire = expire;
     return constr;
 }
 
@@ -543,7 +543,7 @@ Constraint *constraintTranslate(Constraint *constr, Solver *solver) {
         constraintNodeFree(output);
         return NULL;
     } else {
-        return constraintNew(solver, output);
+        return constraintNew(solver, output, constr->expire);
     }
 }
 

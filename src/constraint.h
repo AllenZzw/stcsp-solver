@@ -60,7 +60,8 @@ ConstraintNode *constraintNodeNewAt(Variable *var, int timepoint);
 ConstraintNode *constraintNodeParse(Solver *solver, Node *node);
 void constraintNodeLogPrint(ConstraintNode *node, Solver *solver);
 
-Constraint *constraintNew(Solver *solver, ConstraintNode *node);
+Constraint *constraintNew(Solver *solver, ConstraintNode *node, int expire = 0);
+Constraint *constraintNew(Solver *solver, ConstraintNode *node, int expire);
 void constraintFree(Constraint *constr);
 
 ConstraintQueue *constraintQueueNew();
